@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Роут працює на сервері — ключ OpenAI НІКОЛИ не потрапляє в браузер.
+// Роут працює на сервері — ключ Groq НІКОЛИ не потрапляє в браузер.
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL = process.env.OPENAI_STT_MODEL || "whisper-1";
-const MAX_BYTES = 25 * 1024 * 1024; // Whisper приймає файли до 25 MB
+// Groq має OpenAI-сумісний endpoint для транскрипції.
+const GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
+const MODEL = process.env.GROQ_STT_MODEL || "whisper-large-v3";
+const MAX_BYTES = 25 * 1024 * 1024; // Groq free tier приймає файли до 25 MB
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
       {
         error:
-          "Не налаштовано OPENAI_API_KEY. Додай ключ у .env.local (локально) та в Environment Variables на Vercel.",
+          "Не налаштовано GROQ_API_KEY. Зареєструйся на console.groq.com, створи ключ і додай його у .env.local (локально) та в Environment Variables на Vercel.",
       },
       { status: 500 }
     );
@@ -55,23 +57,23 @@ export async function POST(req: NextRequest) {
     type: audio.type || "application/octet-stream",
   });
 
-  const openaiForm = new FormData();
-  openaiForm.append("file", named);
-  openaiForm.append("model", MODEL);
-  openaiForm.append("response_format", "verbose_json");
+  const groqForm = new FormData();
+  groqForm.append("file", named);
+  groqForm.append("model", MODEL);
+  groqForm.append("response_format", "verbose_json");
   // Не форсуємо мову — Whisper визначить сам; це дозволяє укр/англ суміш.
 
   try {
-    const resp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    const resp = await fetch(GROQ_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}` },
-      body: openaiForm,
+      body: groqForm,
     });
 
     if (!resp.ok) {
       const detail = await resp.text();
       return NextResponse.json(
-        { error: `Whisper повернув помилку ${resp.status}`, detail },
+        { error: `Groq повернув помилку ${resp.status}`, detail },
         { status: 502 }
       );
     }
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ transcript, lang, model: MODEL });
   } catch (err) {
     return NextResponse.json(
-      { error: "Не вдалося звернутися до Whisper.", detail: String(err) },
+      { error: "Не вдалося звернутися до Groq.", detail: String(err) },
       { status: 502 }
     );
   }
