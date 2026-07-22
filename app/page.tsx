@@ -1,18 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { VoiceRecorder, isRecordingSupported } from "@/lib/audio/recorder";
-
-interface TaskItem {
-  title: string;
-  due_date: string | null;
-  time: string | null;
-  priority: "low" | "medium" | "high";
-  category: string;
-  notes: string | null;
-}
+import { Task } from "@/lib/types";
+import { useTasksStore, useHydrated } from "@/lib/store/tasks";
 
 type VoiceState = "idle" | "recording" | "transcribing";
+type TabKey = "today" | "all";
 
 const EXAMPLE =
   "Завтра о 10 ранку зідзвон з дизайн-командою. Треба до п'ятниці здати макети лендінга, це терміново. Купити молоко і хліб. Записатись до стоматолога наступного тижня.";
@@ -24,12 +19,25 @@ function formatTimer(ms: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function Home() {
+  const router = useRouter();
+
   const [text, setText] = useState("");
-  const [tasks, setTasks] = useState<TaskItem[] | null>(null);
-  const [raw, setRaw] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+
+  // Стор
+  const hydrated = useHydrated();
+  const tasks = useTasksStore((s) => s.tasks);
+  const setDrafts = useTasksStore((s) => s.setDrafts);
+  const toggleDone = useTasksStore((s) => s.toggleDone);
+  const deleteTask = useTasksStore((s) => s.deleteTask);
+
+  const [tab, setTab] = useState<TabKey>("today");
 
   // Голос
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
@@ -111,8 +119,6 @@ export default function Home() {
   async function handleParse() {
     setLoading(true);
     setError("");
-    setTasks(null);
-    setRaw("");
     try {
       const res = await fetch("/api/parse", {
         method: "POST",
@@ -122,11 +128,15 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) {
         setError(data?.error || "Сталася помилка.");
-        if (data?.detail) setRaw(JSON.stringify(data, null, 2));
         return;
       }
-      setTasks(data.tasks || []);
-      setRaw(JSON.stringify(data, null, 2));
+      const parsed = data.tasks || [];
+      if (parsed.length === 0) {
+        setError("Задач не знайдено. Спробуй сформулювати конкретніше.");
+        return;
+      }
+      setDrafts(parsed);
+      router.push("/review");
     } catch (e) {
       setError("Не вдалося з'єднатися з сервером: " + String(e));
     } finally {
@@ -136,12 +146,23 @@ export default function Home() {
 
   const isBusy = voiceState !== "idle";
 
+  const today = todayISO();
+  const visibleTasks = useMemo(() => {
+    if (tab === "all") return tasks;
+    // «Сьогодні»: сьогоднішні + прострочені, ще не виконані.
+    return tasks.filter(
+      (t) => !t.done && t.due_date !== null && t.due_date <= today
+    );
+  }, [tasks, tab, today]);
+
+  const doneCount = tasks.filter((t) => t.done).length;
+
   return (
     <main className="wrap">
       <h1>AI Planner — розбір голосу в задачі</h1>
       <p className="sub">
         Наговори або встав текст → отримай структуровані задачі. Фаза 0:
-        голос → транскрипт → розбір.
+        голос → транскрипт → розбір → підтвердження.
       </p>
 
       {/* Голос — головний акцент */}
@@ -170,71 +191,129 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="grid">
-        <div>
-          <label>Текст (голос або вручну)</label>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Наговори кнопкою вгорі або напиши текст із задачами…"
-            disabled={isBusy}
-          />
-          <div className="hint">
-            Немає ідей?{" "}
+      {/* Захоплення тексту */}
+      <div className="capture">
+        <label>Текст (голос або вручну)</label>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Наговори кнопкою вгорі або напиши текст із задачами…"
+          disabled={isBusy}
+        />
+        <div className="capture-actions">
+          <button onClick={handleParse} disabled={loading || isBusy || !text.trim()}>
+            {loading ? "Розбираю…" : "Розібрати"}
+          </button>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => {
+              setText("");
+              setError("");
+            }}
+            disabled={isBusy || !text.trim()}
+          >
+            Очистити
+          </button>
+          {!text.trim() && (
             <a
               href="#"
+              className="hint-link"
               onClick={(e) => {
                 e.preventDefault();
                 setText(EXAMPLE);
               }}
-              style={{ color: "var(--accent)" }}
             >
               Вставити приклад
             </a>
-          </div>
-          <button onClick={handleParse} disabled={loading || isBusy || !text.trim()}>
-            {loading ? "Розбираю…" : "Розібрати"}
+          )}
+        </div>
+        {error && <div className="error">{error}</div>}
+      </div>
+
+      {/* Списки */}
+      <section className="lists">
+        <div className="tabs">
+          <button
+            type="button"
+            className={`tab ${tab === "today" ? "active" : ""}`}
+            onClick={() => setTab("today")}
+          >
+            Сьогодні
           </button>
-          {error && <div className="error">{error}</div>}
+          <button
+            type="button"
+            className={`tab ${tab === "all" ? "active" : ""}`}
+            onClick={() => setTab("all")}
+          >
+            Всі задачі {hydrated && tasks.length > 0 ? `(${tasks.length})` : ""}
+          </button>
         </div>
 
-        <div>
-          <label>Результат</label>
-          <div className="output">
-            {tasks && tasks.length > 0 && (
-              <div className="cards">
-                {tasks.map((t, i) => (
-                  <div className="card" key={i}>
-                    <div className="card-title">{t.title}</div>
-                    <div className="badges">
-                      <span className={`badge ${t.priority}`}>{t.priority}</span>
-                      <span className="badge">{t.category}</span>
-                      {t.due_date && <span className="badge">📅 {t.due_date}</span>}
-                      {t.time && <span className="badge">🕑 {t.time}</span>}
-                    </div>
-                    {t.notes && <div className="hint">{t.notes}</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-            {tasks && tasks.length === 0 && (
-              <div className="hint">Задач не знайдено.</div>
-            )}
-            {!tasks && !error && (
-              <div className="hint">Тут з'явиться розібраний результат…</div>
-            )}
-            {raw && (
-              <details style={{ marginTop: 16 }}>
-                <summary className="hint" style={{ cursor: "pointer" }}>
-                  Показати сирий JSON
-                </summary>
-                <pre>{raw}</pre>
-              </details>
-            )}
+        {!hydrated ? (
+          <div className="hint">Завантаження…</div>
+        ) : visibleTasks.length === 0 ? (
+          <div className="hint">
+            {tab === "today"
+              ? "На сьогодні порожньо. Наговори або встав задачі вгорі."
+              : "Задач ще немає. Наговори або встав текст і натисни «Розібрати»."}
           </div>
-        </div>
-      </div>
+        ) : (
+          <div className="cards">
+            {visibleTasks.map((t) => (
+              <TaskRow
+                key={t.id}
+                task={t}
+                onToggle={() => toggleDone(t.id)}
+                onDelete={() => deleteTask(t.id)}
+              />
+            ))}
+          </div>
+        )}
+
+        {hydrated && tab === "all" && doneCount > 0 && (
+          <div className="hint">Виконано: {doneCount} із {tasks.length}</div>
+        )}
+      </section>
     </main>
+  );
+}
+
+function TaskRow({
+  task,
+  onToggle,
+  onDelete,
+}: {
+  task: Task;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className={`card task-row ${task.done ? "done" : ""}`}>
+      <label className="check">
+        <input type="checkbox" checked={task.done} onChange={onToggle} />
+        <span className="checkmark" aria-hidden="true" />
+      </label>
+      <div className="task-body">
+        <div className="card-title">{task.title}</div>
+        <div className="badges">
+          <span className={`badge ${task.priority}`}>{task.priority}</span>
+          <span className="badge">{task.category}</span>
+          {task.due_date && <span className="badge">📅 {task.due_date}</span>}
+          {task.time && <span className="badge">🕑 {task.time}</span>}
+        </div>
+        {task.notes && <div className="hint">{task.notes}</div>}
+      </div>
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onDelete}
+        aria-label="Видалити задачу"
+        title="Видалити"
+      >
+        ✕
+      </button>
+    </div>
   );
 }
 
