@@ -1,24 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+/*
+ * Дизайн-токени — єдине джерело правди для кольору, типографіки,
+ * відступів, радіусів і руху. Компонентам заборонено хардкодити
+ * `#`-хекси — усе через ці змінні (див. docs/redesign-plan.md, крок 1).
+ */
 :root {
-  --bg: #0f1115;
-  --panel: #1a1d24;
-  --border: #2a2f3a;
-  --text: #e6e8ec;
-  --muted: #9aa3b2;
-  --accent: #6d5efc;
-  --accent-hover: #5b4de0;
+  /* Колір — світла тепла палітра */
+  --bg: #FFF7F0;
+  --surface: #FFFFFF;
+  --surface-sunken: #F7EBE1;
+  --border: #EADFD6;
+  --ink: #3C3C3B;
+  --ink-2: #6B6764;
+  --ink-3: #756E69;
+  --ink-disabled: #9A948F;
+  --accent: #7A6A6A;
+  --accent-press: #665858;
+  --accent-soft: #EFE6E2;
+  --signal: #0E0BAE;
+  --signal-soft: #E7E6FA;
+  --danger: #9E4A3C;
+  --on-accent: #FFFFFF;
+
+  /* rgba-варіанти для тіней/пульсацій, похідні від тих самих кольорів */
+  --signal-rgb: 14, 11, 174;
+  --accent-rgb: 122, 106, 106;
+  --danger-rgb: 158, 74, 60;
+
+  /* Типографіка — реальні шрифти підключені через next/font у app/layout.tsx,
+     тут лише фолбек-ланцюжок на випадок затримки завантаження. */
+  --font-sans: var(--font-onest), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), "SF Mono", Menlo, monospace;
+  /* Тільки для назви бренду "Zmotano" біля лого — не для основного тексту. */
+  --font-brand: var(--font-caveat), cursive;
+
+  --t-display-size: 1.375rem; --t-display-line: 1.875rem; --t-display-weight: 300;
+  --t-h1-size: 1.25rem; --t-h1-line: 1.625rem; --t-h1-weight: 600;
+  --t-h2-size: 1.0625rem; --t-h2-line: 1.5rem; --t-h2-weight: 600;
+  --t-body-size: 1rem; --t-body-line: 1.5rem; --t-body-weight: 400;
+  --t-meta-size: 0.8125rem; --t-meta-line: 1.125rem; --t-meta-weight: 400;
+  --t-label-size: 0.75rem; --t-label-line: 1rem; --t-label-weight: 600;
+
+  /* Відступи */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px;
+  --s-14: 56px; --s-18: 72px;
+
+  /* Радіуси */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+
+  /* Тіні — теплі, замішані на ink/accent, а не нейтрально-чорні */
+  --shadow-card: 0 1px 2px rgba(60, 60, 59, .05);
+  --shadow-mic: 0 10px 32px rgba(var(--accent-rgb), .22);
+
+  /* Рух */
+  --ease: cubic-bezier(.32, .72, 0, 1);
+  --dur-tap: 140ms;
+  --dur-state: 240ms;
+  --dur-unwind: 700ms;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg);
-  color: var(--text);
+  color: var(--ink);
   line-height: 1.5;
+}
+
+.mono {
+  font-family: var(--font-mono);
 }
 
 .wrap {
@@ -28,13 +90,71 @@ body {
 }
 
 h1 {
-  font-size: 28px;
-  margin-bottom: 8px;
+  font-size: var(--t-h1-size);
+  line-height: var(--t-h1-line);
+  font-weight: var(--t-h1-weight);
+  margin-bottom: var(--s-2);
 }
 
 .sub {
-  color: var(--muted);
-  margin-bottom: 32px;
+  color: var(--ink-2);
+  margin-bottom: var(--s-8);
+}
+
+/* --- Бренд (лого + назва) --- */
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: var(--s-2);
+}
+
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  flex: 0 0 auto;
+}
+
+.brand-name {
+  font-family: var(--font-brand);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.brand .sub {
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  font-size: var(--t-display-size);
+  line-height: var(--t-display-line);
+  font-weight: var(--t-display-weight);
+  color: var(--ink);
+  margin-bottom: var(--s-8);
+}
+
+/* --- Композиція Capture: лого + тагляйн + мікрофон одним центрованим стовпцем --- */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: var(--s-6);
+  margin-bottom: var(--s-8);
+  gap: var(--s-8);
+}
+
+/* На низьких екранах (ландшафт/маленькі телефони) стискаємо тагляйн,
+   щоб композиція не змушувала сторінку скролитись раніше кнопки. */
+@media (max-height: 700px) {
+  .brand .sub {
+    font-size: 1.125rem;
+    line-height: 1.625rem;
+  }
 }
 
 /* --- Голос: головний акцент --- */
@@ -43,45 +163,63 @@ h1 {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  margin-bottom: 32px;
 }
 
 .mic-btn {
   margin: 0;
-  width: 88px;
-  height: 88px;
+  width: clamp(220px, 66vw, 288px);
+  height: clamp(220px, 66vw, 288px);
+  max-width: 288px;
+  max-height: 288px;
   min-width: 44px;
   min-height: 44px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--accent);
-  color: #fff;
-  box-shadow: 0 6px 20px rgba(109, 94, 252, 0.35);
-  transition: transform 0.12s, background 0.15s, box-shadow 0.15s;
+  color: var(--on-accent);
+  box-shadow: var(--shadow-mic);
+  transition: transform var(--dur-tap) var(--ease), background var(--dur-state) var(--ease),
+    box-shadow var(--dur-state) var(--ease);
 }
 
-.mic-btn:hover:not(:disabled) { background: var(--accent-hover); }
+.mic-btn:hover:not(:disabled) { background: var(--accent-press); }
 .mic-btn:active:not(:disabled) { transform: scale(0.96); }
 
+@media (max-height: 700px) {
+  .mic-btn {
+    width: clamp(180px, 52vw, 220px);
+    height: clamp(180px, 52vw, 220px);
+    max-width: 220px;
+    max-height: 220px;
+  }
+}
+
 .mic-btn.recording {
-  background: #e5484d;
-  box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.5);
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(var(--signal-rgb), 0.45), var(--shadow-mic);
   animation: mic-pulse 1.4s infinite;
 }
 
 @keyframes mic-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.5); }
-  70% { box-shadow: 0 0 0 18px rgba(229, 72, 77, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(var(--signal-rgb), 0.45), var(--shadow-mic); }
+  70% { box-shadow: 0 0 0 18px rgba(var(--signal-rgb), 0), var(--shadow-mic); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--signal-rgb), 0), var(--shadow-mic); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic-btn.recording {
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(var(--signal-rgb), 0.45), var(--shadow-mic);
+  }
 }
 
 .mic-spinner {
   width: 30px;
   height: 30px;
   border: 3px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
+  border-top-color: var(--on-accent);
   border-radius: 50%;
   animation: mic-spin 0.8s linear infinite;
 }
@@ -90,14 +228,18 @@ h1 {
   to { transform: rotate(360deg); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .mic-spinner { animation: none; }
+}
+
 .mic-status {
-  font-size: 14px;
-  color: var(--muted);
+  font-size: var(--t-meta-size);
+  color: var(--ink-2);
   min-height: 20px;
   text-align: center;
 }
 
-.rec-live { color: #ff8a8d; font-weight: 600; }
+.rec-live { color: var(--signal); font-weight: 600; }
 
 .grid {
   display: grid;
@@ -111,9 +253,9 @@ h1 {
 
 label {
   display: block;
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 8px;
+  font-size: var(--t-label-size);
+  color: var(--ink-2);
+  margin-bottom: var(--s-2);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -121,61 +263,61 @@ label {
 textarea {
   width: 100%;
   min-height: 220px;
-  background: var(--panel);
+  background: var(--surface-sunken);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   padding: 14px;
-  color: var(--text);
-  font-size: 15px;
+  color: var(--ink);
+  font-size: 16px; /* мінімум 16px — інакше iOS Safari зумить при фокусі */
   resize: vertical;
   font-family: inherit;
 }
 
 textarea:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--signal);
 }
 
 button {
   margin-top: 16px;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   padding: 12px 22px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--dur-state) var(--ease);
 }
 
-button:hover:not(:disabled) { background: var(--accent-hover); }
+button:hover:not(:disabled) { background: var(--accent-press); }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .output {
-  background: var(--panel);
+  background: var(--surface-sunken);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   padding: 14px;
   min-height: 220px;
   overflow: auto;
 }
 
 pre {
-  font-family: "SF Mono", Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .error {
-  color: #ff6b6b;
+  color: var(--danger);
   font-size: 14px;
   margin-top: 12px;
 }
 
 .hint {
-  color: var(--muted);
+  color: var(--ink-2);
   font-size: 13px;
   margin-top: 8px;
 }
@@ -183,27 +325,31 @@ pre {
 .cards { display: flex; flex-direction: column; gap: 12px; }
 
 .card {
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
   padding: 12px 14px;
 }
 
-.card-title { font-weight: 600; margin-bottom: 6px; }
+.card-title { font-weight: 600; margin-bottom: 6px; color: var(--ink); }
 
 .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
 .badge {
   font-size: 12px;
   padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--border);
-  color: var(--muted);
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
 }
 
-.badge.high { background: #4a2020; color: #ff9b9b; }
-.badge.medium { background: #4a3a20; color: #ffcf8f; }
-.badge.low { background: #204a2a; color: #9bffb0; }
+/* Терміновість — синім (--signal), не червоним. Червоний лишається лише
+   для видалення/прострочення (--danger). Повна заміна на PriorityDot — крок 6. */
+.badge.high { background: var(--signal-soft); color: var(--signal); }
+.badge.medium { background: var(--surface-sunken); color: var(--accent); }
+.badge.low { background: var(--surface-sunken); color: var(--ink-disabled); }
 
 /* --- Захоплення тексту --- */
 .capture { margin-bottom: 36px; }
@@ -215,15 +361,21 @@ pre {
   flex-wrap: wrap;
 }
 
+/* Глобальний `button { margin-top: 16px }` зсував кнопки нижче за сусідній
+   `.hint-link` у цьому рядку — тут кнопки центруються самим flex-рядком. */
+.capture-actions button {
+  margin-top: 0;
+}
+
 .btn-ghost {
   background: transparent;
   border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--ink);
 }
-.btn-ghost:hover:not(:disabled) { background: var(--panel); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-sunken); }
 
 .hint-link {
-  color: var(--accent);
+  color: var(--signal);
   font-size: 13px;
   text-decoration: none;
 }
@@ -245,12 +397,12 @@ pre {
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
-  color: var(--muted);
+  color: var(--ink-2);
   font-weight: 600;
   padding: 10px 4px;
 }
-.tab:hover:not(:disabled) { background: transparent; color: var(--text); }
-.tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.tab:hover:not(:disabled) { background: transparent; color: var(--ink); }
+.tab.active { color: var(--ink); border-bottom-color: var(--signal); }
 
 /* --- Рядок задачі --- */
 .task-row {
@@ -263,7 +415,7 @@ pre {
 
 .task-row.done .card-title {
   text-decoration: line-through;
-  color: var(--muted);
+  color: var(--ink-3);
 }
 .task-row.done { opacity: 0.7; }
 
@@ -289,7 +441,7 @@ pre {
   border-radius: 6px;
   border: 2px solid var(--border);
   display: inline-block;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background var(--dur-tap) var(--ease), border-color var(--dur-tap) var(--ease);
 }
 .check input:checked + .checkmark {
   background: var(--accent);
@@ -302,12 +454,12 @@ pre {
   top: 4px;
   width: 5px;
   height: 10px;
-  border: solid #fff;
+  border: solid var(--on-accent);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 .check input:focus-visible + .checkmark {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--signal);
   outline-offset: 2px;
 }
 
@@ -315,14 +467,14 @@ pre {
   margin: 0;
   background: transparent;
   border: none;
-  color: var(--muted);
+  color: var(--ink-2);
   font-size: 16px;
   line-height: 1;
   padding: 4px 8px;
   border-radius: 6px;
   flex: 0 0 auto;
 }
-.icon-btn:hover:not(:disabled) { background: var(--border); color: #ff9b9b; }
+.icon-btn:hover:not(:disabled) { background: var(--surface-sunken); color: var(--danger); }
 
 /* --- Review --- */
 .review-actions {
@@ -340,12 +492,12 @@ pre {
   justify-content: space-between;
   margin-bottom: 8px;
 }
-.draft-num { color: var(--muted); font-size: 13px; font-weight: 600; }
+.draft-num { color: var(--ink-2); font-size: 13px; font-weight: 600; font-family: var(--font-mono); }
 
 .field-label {
   display: block;
-  font-size: 12px;
-  color: var(--muted);
+  font-size: var(--t-label-size);
+  color: var(--ink-2);
   margin: 10px 0 4px;
   text-transform: none;
   letter-spacing: 0;
@@ -353,15 +505,15 @@ pre {
 
 .field {
   width: 100%;
-  background: var(--panel);
+  background: var(--surface-sunken);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 10px 12px;
-  color: var(--text);
-  font-size: 15px;
+  color: var(--ink);
+  font-size: 16px;
   font-family: inherit;
 }
-.field:focus { outline: none; border-color: var(--accent); }
+.field:focus { outline: none; border-color: var(--signal); box-shadow: 0 0 0 1px var(--signal); }
 
 .field-grid {
   display: grid;
@@ -380,4 +532,15 @@ pre {
 select.field {
   appearance: none;
   -webkit-appearance: none;
+}
+
+/* --- Транскрипт на Review --- */
+.transcript-block {
+  background: var(--surface-sunken);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  color: var(--ink-2);
+  margin-bottom: var(--s-6);
+  font-size: var(--t-meta-size);
+  line-height: var(--t-meta-line);
 }

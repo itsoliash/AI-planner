@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { VoiceRecorder, isRecordingSupported } from "@/lib/audio/recorder";
 import { Task } from "@/lib/types";
 import { useTasksStore, useHydrated } from "@/lib/store/tasks";
+import Brand from "@/components/Brand";
 
 type VoiceState = "idle" | "recording" | "transcribing";
 type TabKey = "today" | "all";
@@ -159,35 +160,33 @@ export default function Home() {
 
   return (
     <main className="wrap">
-      <h1>AI Planner — розбір голосу в задачі</h1>
-      <p className="sub">
-        Наговори або встав текст → отримай структуровані задачі. Фаза 0:
-        голос → транскрипт → розбір → підтвердження.
-      </p>
+      {/* Композиція Capture: лого + тагляйн + мікрофон одним центрованим блоком (ТЗ 3.1) */}
+      <div className="hero">
+        <Brand tagline="Плутанина думок в голові? Розкажи — змотаю в план" />
 
-      {/* Голос — головний акцент */}
-      <div className="mic-block">
-        <button
-          type="button"
-          className={`mic-btn ${voiceState}`}
-          onClick={voiceState === "recording" ? stopRecording : startRecording}
-          disabled={!voiceSupported || voiceState === "transcribing"}
-          aria-label={voiceState === "recording" ? "Зупинити запис" : "Почати запис"}
-        >
-          {voiceState === "transcribing" ? (
-            <span className="mic-spinner" />
-          ) : (
-            <MicIcon active={voiceState === "recording"} />
-          )}
-        </button>
-        <div className="mic-status">
-          {voiceState === "idle" && (voiceSupported
-            ? "Натисни, щоб наговорити задачі"
-            : "Запис голосу недоступний у цьому браузері — введи текст нижче")}
-          {voiceState === "recording" && (
-            <span className="rec-live">● Запис… {formatTimer(elapsed)}</span>
-          )}
-          {voiceState === "transcribing" && "Розпізнаю мовлення…"}
+        <div className="mic-block">
+          <button
+            type="button"
+            className={`mic-btn ${voiceState}`}
+            onClick={voiceState === "recording" ? stopRecording : startRecording}
+            disabled={!voiceSupported || voiceState === "transcribing"}
+            aria-label={voiceState === "recording" ? "Зупинити запис" : "Почати запис"}
+          >
+            {voiceState === "transcribing" ? (
+              <span className="mic-spinner" />
+            ) : (
+              <MicIcon active={voiceState === "recording"} />
+            )}
+          </button>
+          <div className="mic-status">
+            {voiceState === "idle" && (voiceSupported
+              ? "Натисни, щоб наговорити задачі"
+              : "Запис голосу недоступний у цьому браузері — введи текст нижче")}
+            {voiceState === "recording" && (
+              <span className="rec-live">● Запис… {formatTimer(elapsed)}</span>
+            )}
+            {voiceState === "transcribing" && "Розпізнаю мовлення…"}
+          </div>
         </div>
       </div>
 
@@ -231,50 +230,46 @@ export default function Home() {
         {error && <div className="error">{error}</div>}
       </div>
 
-      {/* Списки */}
-      <section className="lists">
-        <div className="tabs">
-          <button
-            type="button"
-            className={`tab ${tab === "today" ? "active" : ""}`}
-            onClick={() => setTab("today")}
-          >
-            Сьогодні
-          </button>
-          <button
-            type="button"
-            className={`tab ${tab === "all" ? "active" : ""}`}
-            onClick={() => setTab("all")}
-          >
-            Всі задачі {hydrated && tasks.length > 0 ? `(${tasks.length})` : ""}
-          </button>
-        </div>
-
-        {!hydrated ? (
-          <div className="hint">Завантаження…</div>
-        ) : visibleTasks.length === 0 ? (
-          <div className="hint">
-            {tab === "today"
-              ? "На сьогодні порожньо. Наговори або встав задачі вгорі."
-              : "Задач ще немає. Наговори або встав текст і натисни «Розібрати»."}
+      {/* Списки — показуємо тільки коли є хоч одна збережена задача */}
+      {hydrated && tasks.length > 0 && (
+        <section className="lists">
+          <div className="tabs">
+            <button
+              type="button"
+              className={`tab ${tab === "today" ? "active" : ""}`}
+              onClick={() => setTab("today")}
+            >
+              Сьогодні
+            </button>
+            <button
+              type="button"
+              className={`tab ${tab === "all" ? "active" : ""}`}
+              onClick={() => setTab("all")}
+            >
+              Всі задачі ({tasks.length})
+            </button>
           </div>
-        ) : (
-          <div className="cards">
-            {visibleTasks.map((t) => (
-              <TaskRow
-                key={t.id}
-                task={t}
-                onToggle={() => toggleDone(t.id)}
-                onDelete={() => deleteTask(t.id)}
-              />
-            ))}
-          </div>
-        )}
 
-        {hydrated && tab === "all" && doneCount > 0 && (
-          <div className="hint">Виконано: {doneCount} із {tasks.length}</div>
-        )}
-      </section>
+          {visibleTasks.length === 0 ? (
+            <div className="hint">На сьогодні порожньо. Наговори або встав задачі вгорі.</div>
+          ) : (
+            <div className="cards">
+              {visibleTasks.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  task={t}
+                  onToggle={() => toggleDone(t.id)}
+                  onDelete={() => deleteTask(t.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {tab === "all" && doneCount > 0 && (
+            <div className="hint">Виконано: {doneCount} із {tasks.length}</div>
+          )}
+        </section>
+      )}
     </main>
   );
 }

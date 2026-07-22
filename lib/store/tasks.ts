@@ -71,6 +71,8 @@ export const useTasksStore = create<TasksState>()(
   )
 );
 
+const SESSION_FLAG = "ai-planner-session-active";
+
 /**
  * Прапорець «клієнт змонтувався». Повертає false на сервері (prerender) і на
  * першому клієнтському рендері — тому не чіпає store.persist під час рендера
@@ -78,10 +80,21 @@ export const useTasksStore = create<TasksState>()(
  * mismatch. Після маунту стає true. Persist із дефолтним localStorage
  * регідратується синхронно ще до першого рендера на клієнті, тож на момент
  * true задачі вже підтягнуті зі сховища.
+ *
+ * Тут же — очищення задач при «новому заході» (продуктова поведінка,
+ * узгоджена 22.07.2026): нова вкладка/сесія браузера витирає збережені
+ * задачі, а оновлення сторінки (F5) — ні. Різниця в тому, що sessionStorage
+ * переживає F5 у тій самій вкладці, але зникає з новою сесією браузера.
+ * Прапорець ставиться один раз на сесію незалежно від того, яка сторінка
+ * (`/` чи `/review`) змонтувалась першою.
  */
 export function useHydrated(): boolean {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
+    if (typeof window !== "undefined" && !window.sessionStorage.getItem(SESSION_FLAG)) {
+      window.sessionStorage.setItem(SESSION_FLAG, "1");
+      useTasksStore.setState({ tasks: [] });
+    }
     setHydrated(true);
   }, []);
   return hydrated;

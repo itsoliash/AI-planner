@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, PRIORITIES, Priority, Task } from "@/lib/types";
 import { useTasksStore, useHydrated } from "@/lib/store/tasks";
+import Brand from "@/components/Brand";
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function ReviewPage() {
 
   return (
     <main className="wrap">
+      <Brand />
       <h1>Перевір задачі</h1>
       <p className="sub">
         Виправ, що треба, або прибери зайве. Коли все ок — натисни «Підтвердити»,
