@@ -72,24 +72,17 @@ export const useTasksStore = create<TasksState>()(
 );
 
 /**
- * Реактивний прапорець гідрації persist-стору. У Next із SSR стор на першому
- * рендері порожній, а після маунту підтягується з localStorage. Компоненти
- * читають цей прапорець, щоб не показувати «порожньо» до гідрації і не ловити
- * hydration mismatch. Хук ре-рендериться, коли гідрація завершується.
+ * Прапорець «клієнт змонтувався». Повертає false на сервері (prerender) і на
+ * першому клієнтському рендері — тому не чіпає store.persist під час рендера
+ * (інакше на сервері persist === undefined і падає білд) і не дає hydration
+ * mismatch. Після маунту стає true. Persist із дефолтним localStorage
+ * регідратується синхронно ще до першого рендера на клієнті, тож на момент
+ * true задачі вже підтягнуті зі сховища.
  */
 export function useHydrated(): boolean {
-  const [hydrated, setHydrated] = useState(() =>
-    useTasksStore.persist.hasHydrated()
-  );
-
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    const unsub = useTasksStore.persist.onFinishHydration(() =>
-      setHydrated(true)
-    );
-    // Про всяк випадок, якщо гідрація вже сталася до підписки.
-    setHydrated(useTasksStore.persist.hasHydrated());
-    return unsub;
+    setHydrated(true);
   }, []);
-
   return hydrated;
 }
