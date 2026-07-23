@@ -1016,3 +1016,16 @@ a:focus-visible {
   z-index: 1;
 }
 .group-title-sticky.danger { color: var(--danger); }
+
+/* --- Банер помилки на стані `capture` (ТЗ 8.4) --- */
+.error-banner {
+  margin-top: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: var(--r-md);
+  text-align: center;
+  color: var(--danger);
+  max-width: 320px;
+}
+.error-banner .btn-ghost { margin-top: var(--s-2); }
