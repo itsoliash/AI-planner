@@ -1,0 +1,164 @@
+# Review package: 59e1b39..4d32d00
+
+## Commits
+4d32d00 feat: add CaptureDock component
+
+## Files changed
+ app/globals.css                 | 51 +++++++++++++++++++++++++++++
+ components/home/CaptureDock.tsx | 71 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 122 insertions(+)
+
+## Diff
+diff --git a/app/globals.css b/app/globals.css
+index db37936..3e8f770 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -550,20 +550,71 @@ pre {
+   gap: 12px;
+   flex-wrap: wrap;
+ }
+ 
+ /* Глобальний `button { margin-top: 16px }` зсував кнопки нижче за сусідній
+    `.hint-link` у цьому рядку — тут кнопки центруються самим flex-рядком. */
+ .capture-actions button {
+   margin-top: 0;
+ }
+ 
++/* --- CaptureDock (ТЗ 4.3) --- */
++.dock {
++  display: flex;
++  align-items: center;
++  gap: var(--s-2);
++  background: var(--surface-sunken);
++  border: 1px solid var(--border);
++  border-radius: var(--r-pill);
++  height: 56px;
++  padding: 0 var(--s-2) 0 var(--s-4);
++}
++
++.dock-field {
++  flex: 1;
++  min-width: 0;
++  min-height: 0;
++  max-height: 72px; /* ~3 рядки */
++  border: none;
++  background: transparent;
++  resize: none;
++  font-size: 16px;
++  font-family: inherit;
++  color: var(--ink);
++  padding: 8px 0;
++}
++
++.dock-field:focus {
++  outline: none;
++}
++
++.dock-field::placeholder {
++  color: var(--ink-3);
++}
++
++.dock-btn {
++  flex: 0 0 auto;
++  width: 44px;
++  height: 44px;
++  margin: 0;
++  padding: 0;
++  border-radius: var(--r-pill);
++  background: var(--accent);
++  color: var(--on-accent);
++  box-shadow: var(--shadow-mic);
++  display: flex;
++  align-items: center;
++  justify-content: center;
++}
++
++.dock-btn:hover:not(:disabled) { background: var(--accent-press); }
++
+ .btn-ghost {
+   background: transparent;
+   border: 1px solid var(--border);
+   color: var(--ink);
+ }
+ .btn-ghost:hover:not(:disabled) { background: var(--surface-sunken); }
+ 
+ .hint-link {
+   color: var(--signal);
+   font-size: 13px;
+diff --git a/components/home/CaptureDock.tsx b/components/home/CaptureDock.tsx
+new file mode 100644
+index 0000000..24e529c
+--- /dev/null
++++ b/components/home/CaptureDock.tsx
+@@ -0,0 +1,71 @@
++"use client";
++
++import { useState } from "react";
++
++interface CaptureDockProps {
++  value: string;
++  onChange: (value: string) => void;
++  onSubmitText: () => void;
++  onMicTap: () => void;
++  placeholder: string;
++  disabled?: boolean;
++}
++
++export default function CaptureDock({
++  value,
++  onChange,
++  onSubmitText,
++  onMicTap,
++  placeholder,
++  disabled,
++}: CaptureDockProps) {
++  const hasText = value.trim().length > 0;
++
++  return (
++    <div className="dock">
++      <textarea
++        className="dock-field"
++        value={value}
++        onChange={(e) => onChange(e.target.value)}
++        placeholder={placeholder}
++        disabled={disabled}
++        rows={1}
++        onKeyDown={(e) => {
++          if (e.key === "Enter" && !e.shiftKey && hasText) {
++            e.preventDefault();
++            onSubmitText();
++          }
++        }}
++      />
++      <button
++        type="button"
++        className="dock-btn"
++        onClick={hasText ? onSubmitText : onMicTap}
++        disabled={disabled}
++        aria-label={hasText ? "Розібрати текст" : "Почати запис"}
++      >
++        {hasText ? <SendIcon /> : <DockMicIcon />}
++      </button>
++    </div>
++  );
++}
++
++function SendIcon() {
++  return (
++    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
++      <line x1="5" y1="12" x2="19" y2="12" />
++      <polyline points="13 6 19 12 13 18" />
++    </svg>
++  );
++}
++
++function DockMicIcon() {
++  return (
++    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
++      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
++      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
++      <line x1="12" y1="19" x2="12" y2="23" />
++      <line x1="8" y1="23" x2="16" y2="23" />
++    </svg>
++  );
++}

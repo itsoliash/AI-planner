@@ -1,0 +1,38 @@
+# Review package: 451b45b..59e1b39
+
+## Commits
+59e1b39 docs: document Logo size usage for two-state screen
+
+## Files changed
+ components/brand/Logo.tsx | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+## Diff
+diff --git a/components/brand/Logo.tsx b/components/brand/Logo.tsx
+index d6dc2de..6ccb29c 100644
+--- a/components/brand/Logo.tsx
++++ b/components/brand/Logo.tsx
+@@ -1,18 +1,23 @@
+ /**
+  * Лого Zmotano — синя лінія входить у заплутаний клубок і виходить рівною.
+  * Це підписний мотив продукту (хаос → розбір → план), тож лого — SVG
+  * (не растр), кольори тільки з токенів, без фонової плашки, щоб лягало
+  * на будь-яку поверхню (--bg, --surface, --surface-sunken).
+  *
+  * Шляхи мають `id`, щоб пізніше (крок 4/UnwindIndicator) можна було
+  * анімувати саме синю лінію через `stroke-dasharray`, не чіпаючи розмітку.
++ *
++ * Розміри використання (ТЗ «редизайн №2», розділ 4.1–4.2):
++ * - `size={88}` — стан `capture` (розгорнутий).
++ * - `size={32}` — стан `plan` (лого-знак у куті) і компактний індикатор
++ *   обробки з тексту (розділ 5.3).
+  */
+ export default function Logo({
+   size = 40,
+   className,
+ }: {
+   size?: number;
+   className?: string;
+ }) {
+   return (
+     <svg

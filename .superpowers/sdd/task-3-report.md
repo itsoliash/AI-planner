@@ -110,3 +110,57 @@ Files staged and committed:
 ✅ No visible changes to end user
 ✅ TypeScript checks pass
 ✅ Commit created
+
+---
+
+## Regression Fix: Compact Class Restoration
+
+**Issue Found**: The original inline button had a `.compact` class applied when text input was focused while voice was idle, causing it to shrink to ~60% size. This behavior was lost when the button was extracted to a component.
+
+**Root Cause**: `MicButton.tsx` had no mechanism to accept the `compact` condition from the parent component.
+
+### Fix Applied
+
+1. **Added `compact?: boolean` prop** to `MicButtonProps` interface
+2. **Updated button className** to include the compact class:
+   ```tsx
+   className={`mic-btn ${state} ${sizeClass} ${compact ? "compact" : ""}`}
+   ```
+3. **Updated call site** in `app/page.tsx`:
+   ```tsx
+   <MicButton
+     size="full"
+     state={isProcessing ? "processing" : voiceState}
+     onClick={voiceState === "recording" ? stopRecording : startRecording}
+     disabled={!voiceSupported || isProcessing}
+     processingLabel={
+       voiceState === "transcribing" ? "Розплутую\nхаос…." : "Мотаю\nв план…."
+     }
+     compact={textFocused && voiceState === "idle"}
+   />
+   ```
+
+### CSS Selector Verification
+
+CSS class selectors match regardless of class order or extra classes present:
+- When `compact={true}` and `size="full"`: className becomes `"mic-btn idle  compact"`
+- CSS rule `.mic-btn.compact` (globals.css, lines 214–217) matches this because it checks for presence of both `.mic-btn` AND `.compact` classes
+- Button shrinks to ~60% size as expected (via `width: clamp(132px, 40vw, 173px)` and `height: clamp(132px, 40vw, 173px)`)
+
+### TypeScript Verification
+
+```
+npx tsc --noEmit
+```
+**Result**: Clean output (no errors or warnings)
+
+### Commit
+
+```
+Commit SHA: 451b45b
+Message:    "fix: restore compact class for mic button on text focus"
+```
+
+✅ Regression fixed
+✅ Compact behavior restored
+✅ No new issues introduced
