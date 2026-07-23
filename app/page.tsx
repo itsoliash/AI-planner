@@ -214,6 +214,7 @@ export default function Home() {
             processingLabel={
               voiceState === "transcribing" ? "Розплутую\nхаос…." : "Мотаю\nв план…."
             }
+            compact={textFocused && voiceState === "idle"}
           />
           <div className="mic-status">
             {!isProcessing && voiceState === "idle" && (voiceSupported

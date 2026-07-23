@@ -1,0 +1,250 @@
+# Review package: 3e7631d..47ebe50
+
+## Commits
+47ebe50 refactor: extract MicButton component with dock/full sizes
+
+## Files changed
+ app/globals.css                  | 10 ++++++
+ app/page.tsx                     | 68 +++++--------------------------------
+ components/capture/MicButton.tsx | 73 ++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 91 insertions(+), 60 deletions(-)
+
+## Diff
+diff --git a/app/globals.css b/app/globals.css
+index 33b9666..db37936 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -209,20 +209,30 @@ h1 {
+ .mic-btn:hover:not(:disabled) { background: var(--accent-press); }
+ .mic-btn:active:not(:disabled) { transform: scale(0.96); }
+ 
+ /* ~60% розміру, коли текстове поле в фокусі — голос лишається домінантним,
+    але звільняє місце під ввід (ТЗ 3.3). */
+ .mic-btn.compact {
+   width: clamp(132px, 40vw, 173px);
+   height: clamp(132px, 40vw, 173px);
+ }
+ 
++/* Розмір кнопки в доці (ТЗ 4.3) — 56px, завжди однаковий, не залежить від vw */
++.mic-btn-dock {
++  width: 56px;
++  height: 56px;
++  min-width: 56px;
++  min-height: 56px;
++  max-width: 56px;
++  max-height: 56px;
++}
++
+ @media (max-height: 700px) {
+   .mic-btn {
+     width: clamp(180px, 52vw, 220px);
+     height: clamp(180px, 52vw, 220px);
+     max-width: 220px;
+     max-height: 220px;
+   }
+ }
+ 
+ .mic-btn.recording {
+diff --git a/app/page.tsx b/app/page.tsx
+index af8733f..a8dc232 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -1,18 +1,18 @@
+ "use client";
+ 
+ import { useEffect, useMemo, useRef, useState } from "react";
+ import { VoiceRecorder, isRecordingSupported } from "@/lib/audio/recorder";
+ import { Task } from "@/lib/types";
+ import { useTasksStore, useHydrated } from "@/lib/store/tasks";
+ import Brand from "@/components/Brand";
+-import UnwindIndicator from "@/components/capture/UnwindIndicator";
++import MicButton from "@/components/capture/MicButton";
+ import TaskCard from "@/components/ui/TaskCard";
+ 
+ type VoiceState = "idle" | "recording" | "transcribing";
+ type TabKey = "today" | "all";
+ 
+ const EXAMPLE =
+   "Завтра о 10 ранку зідзвон з дизайн-командою. Треба до п'ятниці здати макети лендінга, це терміново. Купити молоко і хліб. Записатись до стоматолога наступного тижня.";
+ 
+ function formatTimer(ms: number): string {
+   const total = Math.floor(ms / 1000);
+@@ -199,54 +199,29 @@ export default function Home() {
+   return (
+     <main className="wrap">
+       {/* Екран Capture: лого/мікрофон зверху, текстовий ввід унизу, між ними
+           авто-відступ, що заповнює висоту екрана (ТЗ 3.1). */}
+       <div className="capture-screen">
+       {/* Композиція Capture: лого + тагляйн + мікрофон одним центрованим блоком (ТЗ 3.1) */}
+       <div className={`hero ${textFocused && voiceState === "idle" ? "compact" : ""}`}>
+         <Brand tagline="Плутанина думок в голові? Розкажи — змотаю в план" />
+ 
+         <div className="mic-block">
+-          <button
+-            type="button"
+-            className={`mic-btn ${voiceState} ${isProcessing ? "processing" : ""} ${
+-              textFocused && voiceState === "idle" ? "compact" : ""
+-            }`}
++          <MicButton
++            size="full"
++            state={isProcessing ? "processing" : voiceState}
+             onClick={voiceState === "recording" ? stopRecording : startRecording}
+             disabled={!voiceSupported || isProcessing}
+-            aria-label={voiceState === "recording" ? "Зупинити запис" : "Почати запис"}
+-          >
+-            {isProcessing ? (
+-              <div className="mic-unwind">
+-                <UnwindIndicator />
+-                <div className="mic-unwind-text">
+-                  <span className="mic-unwind-badge">
+-                    {voiceState === "transcribing" ? (
+-                      <>
+-                        Розплутую
+-                        <br />
+-                        хаос....
+-                      </>
+-                    ) : (
+-                      <>
+-                        Мотаю
+-                        <br />
+-                        в план....
+-                      </>
+-                    )}
+-                  </span>
+-                </div>
+-              </div>
+-            ) : (
+-              <MicIcon active={voiceState === "recording"} />
+-            )}
+-          </button>
++            processingLabel={
++              voiceState === "transcribing" ? "Розплутую\nхаос…." : "Мотаю\nв план…."
++            }
++          />
+           <div className="mic-status">
+             {!isProcessing && voiceState === "idle" && (voiceSupported
+               ? "Тисни й розказуй"
+               : "Запис голосу недоступний у цьому браузері — введи текст нижче")}
+             {!isProcessing && voiceState === "recording" && (
+               <span className="rec-live">● Запис… {formatTimer(elapsed)}</span>
+             )}
+           </div>
+         </div>
+       </div>
+@@ -379,37 +354,10 @@ function SendIcon() {
+       strokeWidth="2"
+       strokeLinecap="round"
+       strokeLinejoin="round"
+       aria-hidden="true"
+     >
+       <line x1="5" y1="12" x2="19" y2="12" />
+       <polyline points="13 6 19 12 13 18" />
+     </svg>
+   );
+ }
+-
+-function MicIcon({ active }: { active: boolean }) {
+-  return (
+-    <svg
+-      width="34"
+-      height="34"
+-      viewBox="0 0 24 24"
+-      fill="none"
+-      stroke="currentColor"
+-      strokeWidth="2"
+-      strokeLinecap="round"
+-      strokeLinejoin="round"
+-      aria-hidden="true"
+-    >
+-      {active ? (
+-        <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none" />
+-      ) : (
+-        <>
+-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+-          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+-          <line x1="12" y1="19" x2="12" y2="23" />
+-          <line x1="8" y1="23" x2="16" y2="23" />
+-        </>
+-      )}
+-    </svg>
+-  );
+-}
+diff --git a/components/capture/MicButton.tsx b/components/capture/MicButton.tsx
+new file mode 100644
+index 0000000..5893e48
+--- /dev/null
++++ b/components/capture/MicButton.tsx
+@@ -0,0 +1,73 @@
++import UnwindIndicator from "@/components/capture/UnwindIndicator";
++
++export type MicButtonSize = "dock" | "full";
++export type MicButtonVisualState = "idle" | "recording" | "processing";
++
++interface MicButtonProps {
++  size: MicButtonSize;
++  state: MicButtonVisualState;
++  onClick: () => void;
++  disabled?: boolean;
++  processingLabel?: string;
++}
++
++export default function MicButton({
++  size,
++  state,
++  onClick,
++  disabled,
++  processingLabel,
++}: MicButtonProps) {
++  const sizeClass = size === "dock" ? "mic-btn-dock" : "";
++  return (
++    <button
++      type="button"
++      className={`mic-btn ${state} ${sizeClass}`}
++      onClick={onClick}
++      disabled={disabled}
++      aria-label={state === "recording" ? "Зупинити запис" : "Почати запис"}
++    >
++      {state === "processing" ? (
++        <div className="mic-unwind">
++          <UnwindIndicator />
++          {processingLabel && (
++            <div className="mic-unwind-text">
++              <span className="mic-unwind-badge" style={{ whiteSpace: "pre-line" }}>
++                {processingLabel}
++              </span>
++            </div>
++          )}
++        </div>
++      ) : (
++        <MicIcon active={state === "recording"} />
++      )}
++    </button>
++  );
++}
++
++function MicIcon({ active }: { active: boolean }) {
++  return (
++    <svg
++      width="34"
++      height="34"
++      viewBox="0 0 24 24"
++      fill="none"
++      stroke="currentColor"
++      strokeWidth="2"
++      strokeLinecap="round"
++      strokeLinejoin="round"
++      aria-hidden="true"
++    >
++      {active ? (
++        <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none" />
++      ) : (
++        <>
++          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
++          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
++          <line x1="12" y1="19" x2="12" y2="23" />
++          <line x1="8" y1="23" x2="16" y2="23" />
++        </>
++      )}
++    </svg>
++  );
++}

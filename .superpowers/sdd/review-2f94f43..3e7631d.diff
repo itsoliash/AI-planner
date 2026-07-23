@@ -1,0 +1,139 @@
+# Review package: 2f94f43..3e7631d
+
+## Commits
+3e7631d feat: add selectToday with budget/limit rules and tests
+
+## Files changed
+ lib/plan/selectToday.test.ts | 69 ++++++++++++++++++++++++++++++++++++++++++--
+ lib/plan/selectToday.ts      | 44 ++++++++++++++++++++++++++++
+ 2 files changed, 110 insertions(+), 3 deletions(-)
+
+## Diff
+diff --git a/lib/plan/selectToday.test.ts b/lib/plan/selectToday.test.ts
+index b83c48d..1814070 100644
+--- a/lib/plan/selectToday.test.ts
++++ b/lib/plan/selectToday.test.ts
+@@ -1,7 +1,70 @@
+ import { describe, it, expect } from "vitest";
++import { selectToday } from "./selectToday";
++import type { Task } from "@/lib/types";
+ 
+-describe("vitest smoke test", () => {
+-  it("runs", () => {
+-    expect(1 + 1).toBe(2);
++function makeTask(overrides: Partial<Task>): Task {
++  return {
++    id: overrides.id ?? Math.random().toString(),
++    title: overrides.title ?? "Задача",
++    due_date: overrides.due_date ?? null,
++    time: overrides.time ?? null,
++    priority: overrides.priority ?? "medium",
++    category: overrides.category ?? "інше",
++    notes: overrides.notes ?? null,
++    estimate_minutes: overrides.estimate_minutes ?? null,
++    done: overrides.done ?? false,
++    createdAt: overrides.createdAt ?? Date.now(),
++  };
++}
++
++describe("selectToday", () => {
++  it("бере всі прострочені задачі повністю, незалежно від бюджету", () => {
++    const tasks = [
++      makeTask({ id: "1", due_date: "2026-07-20", estimate_minutes: 200 }),
++      makeTask({ id: "2", due_date: "2026-07-21", estimate_minutes: 200 }),
++    ];
++    const result = selectToday(tasks, "2026-07-23");
++    expect(result.overdue.map((t) => t.id)).toEqual(["1", "2"]);
++  });
++
++  it("не перевищує бюджет 240 хвилин серед задач на сьогодні/high", () => {
++    const tasks = [
++      makeTask({ id: "a", due_date: "2026-07-23", estimate_minutes: 150 }),
++      makeTask({ id: "b", due_date: "2026-07-23", estimate_minutes: 150 }),
++      makeTask({ id: "c", due_date: "2026-07-23", estimate_minutes: 50 }),
++    ];
++    const result = selectToday(tasks, "2026-07-23");
++    const totalMinutes = result.today.reduce(
++      (sum, t) => sum + (t.estimate_minutes ?? 20),
++      0
++    );
++    expect(totalMinutes).toBeLessThanOrEqual(240);
++    expect(result.today.map((t) => t.id)).toEqual(["a", "c"]);
++  });
++
++  it("не бере більше 7 карток на сьогодні", () => {
++    const tasks = Array.from({ length: 10 }, (_, i) =>
++      makeTask({ id: `t${i}`, due_date: "2026-07-23", estimate_minutes: 5 })
++    );
++    const result = selectToday(tasks, "2026-07-23");
++    expect(result.today.length).toBe(7);
++  });
++
++  it("рахує задачі без estimate_minutes як 20 хвилин", () => {
++    const tasks = [
++      makeTask({ id: "x", due_date: "2026-07-23", estimate_minutes: null }),
++    ];
++    const result = selectToday(tasks, "2026-07-23");
++    expect(result.today.map((t) => t.id)).toEqual(["x"]);
++  });
++
++  it("якщо прострочених більше 7 — показує тільки їх, без додавань", () => {
++    const overdueTasks = Array.from({ length: 8 }, (_, i) =>
++      makeTask({ id: `o${i}`, due_date: "2026-07-20" })
++    );
++    const todayTask = makeTask({ id: "today1", due_date: "2026-07-23" });
++    const result = selectToday([...overdueTasks, todayTask], "2026-07-23");
++    expect(result.overdue.length).toBe(8);
++    expect(result.today.length).toBe(0);
+   });
+ });
+diff --git a/lib/plan/selectToday.ts b/lib/plan/selectToday.ts
+new file mode 100644
+index 0000000..8077e0c
+--- /dev/null
++++ b/lib/plan/selectToday.ts
+@@ -0,0 +1,44 @@
++import type { Task } from "@/lib/types";
++
++const DEFAULT_ESTIMATE_MIN = 20;
++const BUDGET_MINUTES = 240;
++const MAX_CARDS = 7;
++
++function estimate(t: Task): number {
++  return t.estimate_minutes ?? DEFAULT_ESTIMATE_MIN;
++}
++
++export function selectToday(
++  tasks: Task[],
++  todayISO: string
++): { overdue: Task[]; today: Task[] } {
++  const active = tasks.filter((t) => !t.done);
++
++  const overdue = active.filter(
++    (t) => t.due_date !== null && t.due_date < todayISO
++  );
++  const dueToday = active.filter((t) => t.due_date === todayISO);
++  const highNoDate = active.filter(
++    (t) => t.due_date === null && t.priority === "high"
++  );
++
++  // Якщо прострочених забагато — показуємо тільки їх, нічого не додаємо.
++  if (overdue.length > MAX_CARDS) {
++    return { overdue, today: [] };
++  }
++
++  const today: Task[] = [];
++  let usedMinutes = 0;
++  let usedCards = overdue.length;
++
++  for (const t of [...dueToday, ...highNoDate]) {
++    if (usedCards >= MAX_CARDS) break;
++    const cost = estimate(t);
++    if (usedMinutes + cost > BUDGET_MINUTES) continue;
++    today.push(t);
++    usedMinutes += cost;
++    usedCards += 1;
++  }
++
++  return { overdue, today };
++}

@@ -9,6 +9,7 @@ interface MicButtonProps {
   onClick: () => void;
   disabled?: boolean;
   processingLabel?: string;
+  compact?: boolean;
 }
 
 export default function MicButton({
@@ -17,12 +18,13 @@ export default function MicButton({
   onClick,
   disabled,
   processingLabel,
+  compact,
 }: MicButtonProps) {
   const sizeClass = size === "dock" ? "mic-btn-dock" : "";
   return (
     <button
       type="button"
-      className={`mic-btn ${state} ${sizeClass}`}
+      className={`mic-btn ${state} ${sizeClass} ${compact ? "compact" : ""}`}
       onClick={onClick}
       disabled={disabled}
       aria-label={state === "recording" ? "Зупинити запис" : "Почати запис"}

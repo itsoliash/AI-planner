@@ -1,0 +1,75 @@
+# Review package: c5cf97c..b4fd918
+
+## Commits
+b4fd918 feat: add estimate_minutes to task model and parse prompt
+
+## Files changed
+ app/api/parse/route.ts | 2 ++
+ lib/types.ts           | 1 +
+ 2 files changed, 3 insertions(+)
+
+## Diff
+diff --git a/app/api/parse/route.ts b/app/api/parse/route.ts
+index c167ce4..17328c7 100644
+--- a/app/api/parse/route.ts
++++ b/app/api/parse/route.ts
+@@ -13,31 +13,33 @@ function buildSystemPrompt(today: string): string {
+ Правила:
+ - Виділяй КОЖНУ окрему задачу як окремий об'єкт.
+ - Відповідай ВИКЛЮЧНО валідним JSON без пояснень, без markdown, без \`\`\`.
+ - Структура відповіді: {"tasks": [ ... ]}.
+ - Кожна задача має поля:
+   - "title": короткий формулювання задачі українською (рядок)
+   - "due_date": дата у форматі YYYY-MM-DD або null, якщо не вказано
+   - "time": час у форматі HH:MM (24 год) або null
+   - "priority": одне з "low", "medium", "high" (якщо не ясно — "medium")
+   - "category": одне з "робота", "побут", "здоров'я", "фінанси", "навчання", "інше"
++  - "estimate_minutes": орієнтовна тривалість виконання в хвилинах, кратно 5 (число) або null, якщо оцінити неможливо
+   - "notes": додаткові деталі рядком або null
+ - Не вигадуй задач, яких немає в тексті. Якщо задач немає — поверни {"tasks": []}.
+ - Зберігай наміри користувача, не перефразовуй сильно.`;
+ }
+ 
+ interface TaskItem {
+   title: string;
+   due_date: string | null;
+   time: string | null;
+   priority: "low" | "medium" | "high";
+   category: string;
++  estimate_minutes: number | null;
+   notes: string | null;
+ }
+ 
+ export async function POST(req: NextRequest) {
+   const apiKey = process.env.OPENROUTER_API_KEY;
+   if (!apiKey) {
+     return NextResponse.json(
+       { error: "Не налаштовано OPENROUTER_API_KEY. Додай ключ у .env.local (локально) або в Environment Variables на Vercel." },
+       { status: 500 }
+     );
+diff --git a/lib/types.ts b/lib/types.ts
+index 41a003a..e7a8ba9 100644
+--- a/lib/types.ts
++++ b/lib/types.ts
+@@ -19,20 +19,21 @@ export const CATEGORIES: Category[] = [
+ 
+ export const PRIORITIES: Priority[] = ["low", "medium", "high"];
+ 
+ /** Задача як її повертає /api/parse (без клієнтських полів). */
+ export interface ParsedTask {
+   title: string;
+   due_date: string | null; // YYYY-MM-DD
+   time: string | null; // HH:MM
+   priority: Priority;
+   category: string;
++  estimate_minutes: number | null;
+   notes: string | null;
+ }
+ 
+ /** Задача у клієнтському сторі (чернетка або збережена). */
+ export interface Task extends ParsedTask {
+   id: string;
+   done: boolean;
+   createdAt: number;
+ }
+ 
