@@ -20,6 +20,7 @@ function buildSystemPrompt(today: string): string {
   - "time": час у форматі HH:MM (24 год) або null
   - "priority": одне з "low", "medium", "high" (якщо не ясно — "medium")
   - "category": одне з "робота", "побут", "здоров'я", "фінанси", "навчання", "інше"
+  - "estimate_minutes": орієнтовна тривалість виконання в хвилинах, кратно 5 (число) або null, якщо оцінити неможливо
   - "notes": додаткові деталі рядком або null
 - Не вигадуй задач, яких немає в тексті. Якщо задач немає — поверни {"tasks": []}.
 - Зберігай наміри користувача, не перефразовуй сильно.`;
@@ -31,6 +32,7 @@ interface TaskItem {
   time: string | null;
   priority: "low" | "medium" | "high";
   category: string;
+  estimate_minutes: number | null;
   notes: string | null;
 }
 
