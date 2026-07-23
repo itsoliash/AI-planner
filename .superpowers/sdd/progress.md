@@ -40,3 +40,6 @@ Task 2: complete (commits 2f94f43..3e7631d, controller committed manually after 
 Task 3: complete (commits 3e7631d..451b45b, one fix round: dropped compact-on-focus regression caught by reviewer, review clean)
 Task 4: complete (commit 451b45b..59e1b39, review clean)
 Task 5: complete (commits 59e1b39..44ee594, one fix round: auto-grow textarea + unused import, review clean)
+Task 6: complete (commit 44ee594..6cdf5d6, accepted WITHOUT formal task-reviewer per Olha's request 23.07.2026 — implementer self-review + tsc --noEmit clean only)
+Task 7: deferred — Olha asked to switch to inline screen-composition work (Task 8) before finishing Task 7 (swipe-delete + new-task highlight). Revisit later.
+Task 8: complete (commit b113f9d..0648f42, inline, NO subagent/review per Olha's request 23.07.2026 — tsc clean, 6/6 tests pass). Wiring is temporary: dock mic-tap calls startRecording directly, full HomeScreen state machine is Task 9 (not started).
