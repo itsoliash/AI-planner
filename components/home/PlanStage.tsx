@@ -16,6 +16,7 @@ interface PlanStageProps {
   onUpdate: (id: string, patch: Partial<Task>) => void;
   onDelete: (id: string) => void;
   onMicTap: () => void;
+  onStartVoice: () => void;
   dockValue: string;
   onDockChange: (value: string) => void;
   onDockSubmit: () => void;
@@ -40,6 +41,7 @@ export default function PlanStage({
   onUpdate,
   onDelete,
   onMicTap,
+  onStartVoice,
   dockValue,
   onDockChange,
   onDockSubmit,
@@ -108,6 +110,15 @@ export default function PlanStage({
 
       <div className="plan-dock-spacer" />
       <div className="plan-dock-sticky">
+        <button
+          type="button"
+          className="plan-voice-fab"
+          onClick={onStartVoice}
+          disabled={dockDisabled}
+          aria-label="Наговорити задачі"
+        >
+          <VoiceFabIcon />
+        </button>
         <CaptureDock
           value={dockValue}
           onChange={onDockChange}
@@ -118,5 +129,26 @@ export default function PlanStage({
         />
       </div>
     </div>
+  );
+}
+
+function VoiceFabIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" y1="19" x2="12" y2="23" />
+      <line x1="8" y1="23" x2="16" y2="23" />
+    </svg>
   );
 }

@@ -971,6 +971,29 @@ a:focus-visible {
   background: linear-gradient(to top, var(--bg) 70%, transparent);
 }
 
+/* Плаваюча кнопка запису голосу над доком, лівий нижній кут — не перекриває
+   текстове поле й кнопку "надіслати" (окреме прохання Ольги 24.07.2026). */
+.plan-voice-fab {
+  position: absolute;
+  left: var(--s-5);
+  bottom: calc(100% + var(--s-3));
+  margin: 0;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-mic);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.plan-voice-fab:hover:not(:disabled) { background: var(--accent-press); }
+.plan-voice-fab:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* --- Вкладки «Сьогодні / Всі задачі» --- */
 .pill-tabs {
   display: flex;

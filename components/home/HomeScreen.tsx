@@ -33,6 +33,7 @@ export default function HomeScreen() {
         onUpdate={updateTask}
         onDelete={deleteTask}
         onMicTap={flow.expandToCapture}
+        onStartVoice={flow.startRecording}
         dockValue={flow.dockValue}
         onDockChange={flow.setDockValue}
         onDockSubmit={flow.submitText}
