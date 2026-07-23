@@ -935,18 +935,11 @@ a:focus-visible {
 }
 
 .plan-header {
-  padding-top: calc(env(safe-area-inset-top) + var(--s-3));
-}
-
-.plan-title-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  margin: var(--s-4) 0 var(--s-4);
-}
-
-.plan-title-row h1 {
-  margin-bottom: 0;
+  padding-top: calc(env(safe-area-inset-top) + var(--s-3));
+  margin-bottom: var(--s-4);
 }
 
 .plan-date {

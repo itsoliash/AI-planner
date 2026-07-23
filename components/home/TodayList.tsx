@@ -22,14 +22,16 @@ export default function TodayList({
 }: TodayListProps) {
   const groups = [
     { key: "overdue", title: "Прострочені", items: overdue, danger: true },
-    { key: "today", title: "На сьогодні", items: today, danger: false },
+    { key: "today", title: null, items: today, danger: false },
   ].filter((g) => g.items.length > 0);
 
   return (
     <div className="task-groups">
       {groups.map((g) => (
         <div key={g.key} className="task-group">
-          <h2 className={`group-title-sticky ${g.danger ? "danger" : ""}`}>{g.title}</h2>
+          {g.title && (
+            <h2 className={`group-title-sticky ${g.danger ? "danger" : ""}`}>{g.title}</h2>
+          )}
           <div className="cards">
             {g.items.map((t) => (
               <TaskCard

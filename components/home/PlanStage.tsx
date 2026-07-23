@@ -57,10 +57,6 @@ export default function PlanStage({
     <div className="plan-stage">
       <div className="plan-header">
         <Logo size={32} />
-      </div>
-
-      <div className="plan-title-row">
-        <h1>Сьогодні</h1>
         <span className="plan-date mono">{formatDateLabel()}</span>
       </div>
 
