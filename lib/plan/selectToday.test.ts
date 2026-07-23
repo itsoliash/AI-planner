@@ -67,6 +67,18 @@ describe("selectToday", () => {
     expect(result.overdue.length).toBe(8);
     expect(result.today.length).toBe(0);
   });
+
+  it("виводить термінові (high) задачі першими в обох групах", () => {
+    const tasks = [
+      makeTask({ id: "overdue-low", due_date: "2026-07-20", priority: "low" }),
+      makeTask({ id: "overdue-high", due_date: "2026-07-21", priority: "high" }),
+      makeTask({ id: "today-medium", due_date: "2026-07-23", priority: "medium" }),
+      makeTask({ id: "today-high", due_date: "2026-07-23", priority: "high" }),
+    ];
+    const result = selectToday(tasks, "2026-07-23");
+    expect(result.overdue.map((t) => t.id)).toEqual(["overdue-high", "overdue-low"]);
+    expect(result.today.map((t) => t.id)).toEqual(["today-high", "today-medium"]);
+  });
 });
 
 describe("selectRecommendations", () => {

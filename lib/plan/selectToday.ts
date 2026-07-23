@@ -8,6 +8,17 @@ function estimate(t: Task): number {
   return t.estimate_minutes ?? DEFAULT_ESTIMATE_MIN;
 }
 
+const PRIORITY_RANK: Record<Task["priority"], number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+/** Термінові (high) задачі — першими в списку, решта лишається як була. */
+function sortUrgentFirst(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
+}
+
 export function selectToday(
   tasks: Task[],
   todayISO: string
@@ -24,7 +35,7 @@ export function selectToday(
 
   // Якщо прострочених забагато — показуємо тільки їх, нічого не додаємо.
   if (overdue.length > MAX_CARDS) {
-    return { overdue, today: [] };
+    return { overdue: sortUrgentFirst(overdue), today: [] };
   }
 
   const today: Task[] = [];
@@ -40,7 +51,7 @@ export function selectToday(
     usedCards += 1;
   }
 
-  return { overdue, today };
+  return { overdue: sortUrgentFirst(overdue), today: sortUrgentFirst(today) };
 }
 
 /**
