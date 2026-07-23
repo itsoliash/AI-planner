@@ -557,6 +557,57 @@ pre {
   margin-top: 0;
 }
 
+/* --- CaptureDock (ТЗ 4.3) --- */
+.dock {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  height: 56px;
+  padding: 0 var(--s-2) 0 var(--s-4);
+}
+
+.dock-field {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  max-height: 72px; /* ~3 рядки */
+  border: none;
+  background: transparent;
+  resize: none;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--ink);
+  padding: 8px 0;
+}
+
+.dock-field:focus {
+  outline: none;
+}
+
+.dock-field::placeholder {
+  color: var(--ink-3);
+}
+
+.dock-btn {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-mic);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dock-btn:hover:not(:disabled) { background: var(--accent-press); }
+
 .btn-ghost {
   background: transparent;
   border: 1px solid var(--border);
