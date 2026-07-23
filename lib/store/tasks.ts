@@ -4,20 +4,11 @@ import { persist } from "zustand/middleware";
 import { Task, ParsedTask, toTask } from "@/lib/types";
 
 interface TasksState {
-  /** Підтверджені задачі — зберігаються в localStorage. */
+  /** Задачі — зберігаються в localStorage. */
   tasks: Task[];
-  /** Чернетки після розбору — тимчасові, НЕ персистяться. */
-  drafts: Task[];
 
-  // --- Чернетки (Review) ---
-  setDrafts: (parsed: ParsedTask[]) => void;
-  updateDraft: (id: string, patch: Partial<Task>) => void;
-  removeDraft: (id: string) => void;
-  clearDrafts: () => void;
-  /** Переносить усі чернетки у збережений список. */
-  confirmDrafts: () => void;
-
-  // --- Збережені задачі ---
+  /** Розібрані задачі одразу потрапляють у список (без екрана перевірки). */
+  addTasks: (parsed: ParsedTask[]) => void;
   toggleDone: (id: string) => void;
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
@@ -27,25 +18,11 @@ export const useTasksStore = create<TasksState>()(
   persist(
     (set) => ({
       tasks: [],
-      drafts: [],
 
-      setDrafts: (parsed) => set({ drafts: parsed.map(toTask) }),
-
-      updateDraft: (id, patch) =>
+      addTasks: (parsed) =>
         set((s) => ({
-          drafts: s.drafts.map((d) => (d.id === id ? { ...d, ...patch } : d)),
-        })),
-
-      removeDraft: (id) =>
-        set((s) => ({ drafts: s.drafts.filter((d) => d.id !== id) })),
-
-      clearDrafts: () => set({ drafts: [] }),
-
-      confirmDrafts: () =>
-        set((s) => ({
-          // Нові зверху, чернетки очищаємо.
-          tasks: [...s.drafts, ...s.tasks],
-          drafts: [],
+          // Нові зверху.
+          tasks: [...parsed.map(toTask), ...s.tasks],
         })),
 
       toggleDone: (id) =>

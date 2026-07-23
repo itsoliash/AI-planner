@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { VoiceRecorder, isRecordingSupported } from "@/lib/audio/recorder";
 import { Task } from "@/lib/types";
 import { useTasksStore, useHydrated } from "@/lib/store/tasks";
 import Brand from "@/components/Brand";
+import UnwindIndicator from "@/components/capture/UnwindIndicator";
+import TaskCard from "@/components/ui/TaskCard";
 
 type VoiceState = "idle" | "recording" | "transcribing";
 type TabKey = "today" | "all";
@@ -25,17 +26,17 @@ function todayISO(): string {
 }
 
 export default function Home() {
-  const router = useRouter();
-
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+  const [textFocused, setTextFocused] = useState(false);
 
   // Стор
   const hydrated = useHydrated();
   const tasks = useTasksStore((s) => s.tasks);
-  const setDrafts = useTasksStore((s) => s.setDrafts);
+  const addTasks = useTasksStore((s) => s.addTasks);
   const toggleDone = useTasksStore((s) => s.toggleDone);
+  const updateTask = useTasksStore((s) => s.updateTask);
   const deleteTask = useTasksStore((s) => s.deleteTask);
 
   const [tab, setTab] = useState<TabKey>("today");
@@ -136,8 +137,9 @@ export default function Home() {
         setError("Задач не знайдено. Спробуй сформулювати конкретніше.");
         return;
       }
-      setDrafts(parsed);
-      router.push("/review");
+      addTasks(parsed);
+      setText("");
+      setTextFocused(false);
     } catch (e) {
       setError("Не вдалося з'єднатися з сервером: " + String(e));
     } finally {
@@ -146,6 +148,12 @@ export default function Home() {
   }
 
   const isBusy = voiceState !== "idle";
+  // Один і той самий "клубок, що розмотується" — і для STT (transcribing),
+  // і для розбору тексту в задачі (loading) після натискання «Розібрати».
+  const isProcessing = voiceState === "transcribing" || loading;
+  // Згорнутий текстовий ввід розгортається на фокус АБО коли в ньому вже є
+  // текст (наприклад, з голосу) — щоб не ховати те, що вже надиктовано.
+  const isTextExpanded = textFocused || text.trim().length > 0;
 
   const today = todayISO();
   const visibleTasks = useMemo(() => {
@@ -156,65 +164,131 @@ export default function Home() {
     );
   }, [tasks, tab, today]);
 
-  const doneCount = tasks.filter((t) => t.done).length;
+  // Групування табу «Всі задачі»: Прострочені → Сьогодні → Незабаром →
+  // Без дати → Виконано (ТЗ 4.2, адаптовано під повний список задач).
+  const taskGroups = useMemo(() => {
+    const overdue: Task[] = [];
+    const dueToday: Task[] = [];
+    const upcoming: Task[] = [];
+    const noDate: Task[] = [];
+    const done: Task[] = [];
+
+    for (const t of tasks) {
+      if (t.done) {
+        done.push(t);
+      } else if (t.due_date === null) {
+        noDate.push(t);
+      } else if (t.due_date < today) {
+        overdue.push(t);
+      } else if (t.due_date === today) {
+        dueToday.push(t);
+      } else {
+        upcoming.push(t);
+      }
+    }
+
+    return [
+      { key: "overdue", title: "Прострочені", items: overdue, danger: true },
+      { key: "today", title: "Сьогодні", items: dueToday },
+      { key: "upcoming", title: "Незабаром", items: upcoming },
+      { key: "nodate", title: "Без дати", items: noDate },
+      { key: "done", title: "Виконано", items: done },
+    ].filter((g) => g.items.length > 0);
+  }, [tasks, today]);
 
   return (
     <main className="wrap">
+      {/* Екран Capture: лого/мікрофон зверху, текстовий ввід унизу, між ними
+          авто-відступ, що заповнює висоту екрана (ТЗ 3.1). */}
+      <div className="capture-screen">
       {/* Композиція Capture: лого + тагляйн + мікрофон одним центрованим блоком (ТЗ 3.1) */}
-      <div className="hero">
+      <div className={`hero ${textFocused && voiceState === "idle" ? "compact" : ""}`}>
         <Brand tagline="Плутанина думок в голові? Розкажи — змотаю в план" />
 
         <div className="mic-block">
           <button
             type="button"
-            className={`mic-btn ${voiceState}`}
+            className={`mic-btn ${voiceState} ${isProcessing ? "processing" : ""} ${
+              textFocused && voiceState === "idle" ? "compact" : ""
+            }`}
             onClick={voiceState === "recording" ? stopRecording : startRecording}
-            disabled={!voiceSupported || voiceState === "transcribing"}
+            disabled={!voiceSupported || isProcessing}
             aria-label={voiceState === "recording" ? "Зупинити запис" : "Почати запис"}
           >
-            {voiceState === "transcribing" ? (
-              <span className="mic-spinner" />
+            {isProcessing ? (
+              <div className="mic-unwind">
+                <UnwindIndicator />
+                <div className="mic-unwind-text">
+                  <span className="mic-unwind-badge">
+                    {voiceState === "transcribing" ? (
+                      <>
+                        Розплутую
+                        <br />
+                        хаос....
+                      </>
+                    ) : (
+                      <>
+                        Мотаю
+                        <br />
+                        в план....
+                      </>
+                    )}
+                  </span>
+                </div>
+              </div>
             ) : (
               <MicIcon active={voiceState === "recording"} />
             )}
           </button>
           <div className="mic-status">
-            {voiceState === "idle" && (voiceSupported
+            {!isProcessing && voiceState === "idle" && (voiceSupported
               ? "Натисни, щоб наговорити задачі"
               : "Запис голосу недоступний у цьому браузері — введи текст нижче")}
-            {voiceState === "recording" && (
+            {!isProcessing && voiceState === "recording" && (
               <span className="rec-live">● Запис… {formatTimer(elapsed)}</span>
             )}
-            {voiceState === "transcribing" && "Розпізнаю мовлення…"}
           </div>
         </div>
       </div>
 
-      {/* Захоплення тексту */}
+      {/* Захоплення тексту — вторинний спосіб вводу, згорнутий, доки не в фокусі */}
       <div className="capture">
         <label>Текст (голос або вручну)</label>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Наговори кнопкою вгорі або напиши текст із задачами…"
-          disabled={isBusy}
-        />
-        <div className="capture-actions">
-          <button onClick={handleParse} disabled={loading || isBusy || !text.trim()}>
-            {loading ? "Розбираю…" : "Розібрати"}
-          </button>
+        <div className="capture-row">
+          <textarea
+            className={`text-input ${isTextExpanded ? "expanded" : ""}`}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onFocus={() => setTextFocused(true)}
+            onBlur={() => setTextFocused(false)}
+            placeholder="Або напиши, що в голові"
+            disabled={isBusy}
+          />
           <button
             type="button"
-            className="btn-ghost"
-            onClick={() => {
-              setText("");
-              setError("");
-            }}
-            disabled={isBusy || !text.trim()}
+            className="send-btn"
+            onClick={handleParse}
+            disabled={loading || isBusy || !text.trim()}
+            aria-label="Розібрати"
+            title="Розібрати"
           >
-            Очистити
+            {loading ? <span className="mic-spinner" /> : <SendIcon />}
           </button>
-          {!text.trim() && (
+        </div>
+        <div className="capture-actions">
+          {text.trim() ? (
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => {
+                setText("");
+                setError("");
+              }}
+              disabled={isBusy}
+            >
+              Очистити
+            </button>
+          ) : (
             <a
               href="#"
               className="hint-link"
@@ -228,6 +302,7 @@ export default function Home() {
           )}
         </div>
         {error && <div className="error">{error}</div>}
+      </div>
       </div>
 
       {/* Списки — показуємо тільки коли є хоч одна збережена задача */}
@@ -250,23 +325,42 @@ export default function Home() {
             </button>
           </div>
 
-          {visibleTasks.length === 0 ? (
-            <div className="hint">На сьогодні порожньо. Наговори або встав задачі вгорі.</div>
+          {tab === "today" ? (
+            visibleTasks.length === 0 ? (
+              <div className="hint">На сьогодні порожньо. Наговори або встав задачі вгорі.</div>
+            ) : (
+              <div className="cards">
+                {visibleTasks.map((t) => (
+                  <TaskCard
+                    key={t.id}
+                    task={t}
+                    onToggle={() => toggleDone(t.id)}
+                    onUpdate={(patch) => updateTask(t.id, patch)}
+                    onDelete={() => deleteTask(t.id)}
+                  />
+                ))}
+              </div>
+            )
           ) : (
-            <div className="cards">
-              {visibleTasks.map((t) => (
-                <TaskRow
-                  key={t.id}
-                  task={t}
-                  onToggle={() => toggleDone(t.id)}
-                  onDelete={() => deleteTask(t.id)}
-                />
+            <div className="task-groups">
+              {taskGroups.map((g) => (
+                <div key={g.key} className="task-group">
+                  <h2 className={`group-title ${g.danger ? "danger" : ""}`}>
+                    {g.title} ({g.items.length})
+                  </h2>
+                  <div className="cards">
+                    {g.items.map((t) => (
+                      <TaskCard
+                        key={t.id}
+                        task={t}
+                        onToggle={() => toggleDone(t.id)}
+                        onDelete={() => deleteTask(t.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
-          )}
-
-          {tab === "all" && doneCount > 0 && (
-            <div className="hint">Виконано: {doneCount} із {tasks.length}</div>
           )}
         </section>
       )}
@@ -274,41 +368,22 @@ export default function Home() {
   );
 }
 
-function TaskRow({
-  task,
-  onToggle,
-  onDelete,
-}: {
-  task: Task;
-  onToggle: () => void;
-  onDelete: () => void;
-}) {
+function SendIcon() {
   return (
-    <div className={`card task-row ${task.done ? "done" : ""}`}>
-      <label className="check">
-        <input type="checkbox" checked={task.done} onChange={onToggle} />
-        <span className="checkmark" aria-hidden="true" />
-      </label>
-      <div className="task-body">
-        <div className="card-title">{task.title}</div>
-        <div className="badges">
-          <span className={`badge ${task.priority}`}>{task.priority}</span>
-          <span className="badge">{task.category}</span>
-          {task.due_date && <span className="badge">📅 {task.due_date}</span>}
-          {task.time && <span className="badge">🕑 {task.time}</span>}
-        </div>
-        {task.notes && <div className="hint">{task.notes}</div>}
-      </div>
-      <button
-        type="button"
-        className="icon-btn"
-        onClick={onDelete}
-        aria-label="Видалити задачу"
-        title="Видалити"
-      >
-        ✕
-      </button>
-    </div>
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="13 6 19 12 13 18" />
+    </svg>
   );
 }
 

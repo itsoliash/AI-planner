@@ -26,13 +26,21 @@ const caveat = Caveat({
 export const metadata: Metadata = {
   title: "Zmotano — розбір голосу в задачі",
   description: "Прототип: український текст → структуровані задачі (JSON)",
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: "/logo.svg",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Zmotano",
   },
 };
 
 export const viewport = {
   themeColor: "#FFF7F0",
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({

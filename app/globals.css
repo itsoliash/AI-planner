@@ -77,6 +77,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   line-height: 1.5;
+  overscroll-behavior: none;
 }
 
 .mono {
@@ -138,14 +139,31 @@ h1 {
 }
 
 /* --- Композиція Capture: лого + тагляйн + мікрофон одним центрованим стовпцем --- */
+/* Екран Capture: лого/мікрофон зверху, текстовий ввід унизу, авто-відступ
+   між ними заповнює висоту екрана (ТЗ 3.1) — замість фіксованих margin. */
+.capture-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--s-6);
+  min-height: calc(100vh - 96px);
+  min-height: calc(100svh - 96px);
+}
+
 .hero {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   padding-top: var(--s-6);
-  margin-bottom: var(--s-8);
   gap: var(--s-8);
+  transition: gap var(--dur-state) var(--ease);
+}
+
+/* Поле вводу в фокусі — мікрофон лишається головним акцентом, але звільняє
+   місце: зменшується до ~60% (ТЗ 3.3). */
+.hero.compact {
+  gap: var(--s-3);
 }
 
 /* На низьких екранах (ландшафт/маленькі телефони) стискаємо тагляйн,
@@ -180,12 +198,23 @@ h1 {
   background: var(--accent);
   color: var(--on-accent);
   box-shadow: var(--shadow-mic);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
   transition: transform var(--dur-tap) var(--ease), background var(--dur-state) var(--ease),
-    box-shadow var(--dur-state) var(--ease);
+    box-shadow var(--dur-state) var(--ease), width var(--dur-state) var(--ease),
+    height var(--dur-state) var(--ease);
 }
 
 .mic-btn:hover:not(:disabled) { background: var(--accent-press); }
 .mic-btn:active:not(:disabled) { transform: scale(0.96); }
+
+/* ~60% розміру, коли текстове поле в фокусі — голос лишається домінантним,
+   але звільняє місце під ввід (ТЗ 3.3). */
+.mic-btn.compact {
+  width: clamp(132px, 40vw, 173px);
+  height: clamp(132px, 40vw, 173px);
+}
 
 @media (max-height: 700px) {
   .mic-btn {
@@ -200,6 +229,89 @@ h1 {
   background: var(--accent);
   box-shadow: 0 0 0 0 rgba(var(--signal-rgb), 0.45), var(--shadow-mic);
   animation: mic-pulse 1.4s infinite;
+}
+
+/* Обробка (transcribing/planning) — кнопка стає прозорою рамкою під клубок,
+   що розмотується; статус-текст лежить у порожнині всередині клубка. */
+.mic-btn.processing {
+  /* Анімація сама по собі — головний акцент екрану поки триває обробка,
+     тож під час processing вона займає майже всю ширину екрана (як у
+     референсі). Висота йде за пропорцією кадрів (~378:400), а не
+     квадратом — інакше найвищий кадр або обрізається, або зменшується. */
+  width: min(92vw, 380px);
+  height: auto;
+  aspect-ratio: 378 / 400;
+  border-radius: var(--r-lg);
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+@media (max-height: 700px) {
+  .mic-btn.processing {
+    width: min(78vw, 320px);
+  }
+}
+
+.mic-unwind {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  color: var(--ink);
+}
+
+.unwind-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  animation: unwind-cycle calc(var(--dur-unwind) * 3) var(--ease) infinite;
+}
+
+.unwind-frame:nth-child(1) { animation-delay: 0ms; }
+.unwind-frame:nth-child(2) { animation-delay: var(--dur-unwind); }
+.unwind-frame:nth-child(3) { animation-delay: calc(var(--dur-unwind) * 2); }
+
+@keyframes unwind-cycle {
+  0%, 100% { opacity: 0; }
+  6%, 28% { opacity: 1; }
+  34% { opacity: 0; }
+}
+
+.mic-unwind-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mic-unwind-badge {
+  width: 74%;
+  height: 74%;
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 10%;
+  font-family: var(--font-brand);
+  font-size: 32px;
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--signal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unwind-frame {
+    animation: none;
+    opacity: 0;
+  }
+  .unwind-frame:first-child {
+    opacity: 1;
+  }
 }
 
 @keyframes mic-pulse {
@@ -354,6 +466,74 @@ pre {
 /* --- Захоплення тексту --- */
 .capture { margin-bottom: 36px; }
 
+.capture-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* Згорнутий вторинний ввід (ТЗ 3.3): один рядок за замовчуванням,
+   розгортається на фокус або коли в полі вже є текст — до 3 рядків,
+   далі скрол всередині. */
+.text-input {
+  width: 100%;
+  min-height: 52px;
+  max-height: 52px;
+  overflow-y: hidden;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 14px 16px;
+  color: var(--ink);
+  font-size: 16px; /* мінімум 16px — інакше iOS Safari зумить при фокусі */
+  font-family: inherit;
+  line-height: 1.5;
+  resize: none;
+  transition: max-height var(--dur-state) var(--ease);
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--signal);
+}
+
+.text-input.expanded {
+  max-height: 104px;
+  overflow-y: auto;
+  resize: vertical;
+}
+
+.send-btn {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.send-btn:hover:not(:disabled) { background: var(--accent-press); }
+
+.send-btn:disabled {
+  background: var(--ink-disabled);
+  color: var(--surface);
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.send-btn .mic-spinner {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
 .capture-actions {
   display: flex;
   align-items: center;
@@ -393,18 +573,39 @@ pre {
 
 .tab {
   margin: 0;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
   color: var(--ink-2);
   font-weight: 600;
-  padding: 10px 4px;
+  padding: 4px;
 }
 .tab:hover:not(:disabled) { background: transparent; color: var(--ink); }
 .tab.active { color: var(--ink); border-bottom-color: var(--signal); }
 
-/* --- Рядок задачі --- */
+/* --- Групи табу «Всі задачі» (ТЗ 4.2) --- */
+.task-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+}
+
+.task-group .cards { margin-top: var(--s-3); }
+
+.group-title {
+  font-size: var(--t-h2-size);
+  line-height: var(--t-h2-line);
+  font-weight: var(--t-h2-weight);
+  color: var(--ink);
+}
+
+.group-title.danger { color: var(--danger); }
+
+/* --- Рядок задачі (застаріле — замінено TaskCard, кандидат на видалення) --- */
 .task-row {
   display: flex;
   align-items: flex-start;
@@ -420,27 +621,37 @@ pre {
 .task-row.done { opacity: 0.7; }
 
 /* Кастомний чекбокс */
+/* Тач-таргет ≥44px: сам чекбокс лишається візуально 22px, але клікабельна
+   зона навколо нього — повні 44×44. */
 .check {
   position: relative;
   display: inline-flex;
-  margin: 2px 0 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  margin: 0;
   cursor: pointer;
   flex: 0 0 auto;
 }
 .check input {
   position: absolute;
+  inset: 0;
   opacity: 0;
-  width: 22px;
-  height: 22px;
+  width: 100%;
+  height: 100%;
   margin: 0;
   cursor: pointer;
 }
 .checkmark {
+  position: relative;
   width: 22px;
   height: 22px;
   border-radius: 6px;
   border: 2px solid var(--border);
   display: inline-block;
+  flex: 0 0 auto;
   transition: background var(--dur-tap) var(--ease), border-color var(--dur-tap) var(--ease);
 }
 .check input:checked + .checkmark {
@@ -543,4 +754,63 @@ select.field {
   margin-bottom: var(--s-6);
   font-size: var(--t-meta-size);
   line-height: var(--t-meta-line);
+}
+
+.transcript-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.transcript-toggle {
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  background: transparent;
+  color: var(--signal);
+  font-size: var(--t-meta-size);
+  font-weight: 600;
+}
+.transcript-toggle:hover { text-decoration: underline; }
+
+/* --- Липка панель підтвердження на Review --- */
+.wrap-review { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+
+.review-actions {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-6);
+  padding: var(--s-4) 0 calc(var(--s-4) + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+
+.review-confirm {
+  width: 100%;
+  margin: 0;
+  border-radius: var(--r-pill);
+}
+
+.review-cancel {
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.review-cancel:hover:not(:disabled) { background: transparent; color: var(--danger); }
+
+/* --- Доступність: видимий фокус для клавіатурної навігації (ТЗ, крок 9) ---
+   textarea/.text-input/.field/.check вже мають власний індикатор фокусу
+   (border-color/box-shadow) — це правило додає його решті кнопок і посилань,
+   які раніше покладались лише на дефолтний браузерний outline. */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
 }
