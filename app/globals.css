@@ -216,6 +216,16 @@ h1 {
   height: clamp(132px, 40vw, 173px);
 }
 
+/* Розмір кнопки в доці (ТЗ 4.3) — 56px, завжди однаковий, не залежить від vw */
+.mic-btn-dock {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  max-width: 56px;
+  max-height: 56px;
+}
+
 @media (max-height: 700px) {
   .mic-btn {
     width: clamp(180px, 52vw, 220px);
