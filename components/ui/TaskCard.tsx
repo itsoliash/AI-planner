@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CATEGORIES, PRIORITIES, Priority, Task } from "@/lib/types";
+import { CATEGORIES, Task } from "@/lib/types";
 import PriorityDot from "./PriorityDot";
 
 interface TaskCardProps {
@@ -11,11 +11,13 @@ interface TaskCardProps {
 
 /**
  * Єдина картка задачі — використовується у списку на `/`.
- * Тап по вмісту картки відкриває редагування полів прямо на місці —
- * окремого екрана перевірки/підтвердження більше немає (рішення 23.07.2026).
+ * Кожне поле редагується незалежно по тапу на нього самого —
+ * форми "редагувати всю картку" більше немає (рішення 23.07.2026, Task 6).
  */
 export default function TaskCard({ task, onToggle, onUpdate, onDelete }: TaskCardProps) {
-  const [editing, setEditing] = useState(false);
+  const [editingField, setEditingField] = useState<
+    "title" | "date" | "priority" | "estimate" | "category" | null
+  >(null);
 
   return (
     <div
@@ -30,41 +32,129 @@ export default function TaskCard({ task, onToggle, onUpdate, onDelete }: TaskCar
         </label>
       )}
 
-      {editing && onUpdate ? (
-        <EditFields task={task} onChange={onUpdate} onDone={() => setEditing(false)} />
-      ) : (
-        <div
-          className="min-w-0 flex-1 cursor-pointer"
-          role={onUpdate ? "button" : undefined}
-          tabIndex={onUpdate ? 0 : undefined}
-          onClick={() => onUpdate && setEditing(true)}
-          onKeyDown={(e) => {
-            if (onUpdate && (e.key === "Enter" || e.key === " ")) {
-              e.preventDefault();
-              setEditing(true);
-            }
-          }}
-        >
+      <div className="min-w-0 flex-1">
+        {editingField === "title" ? (
+          <input
+            className="task-field-title"
+            autoFocus
+            defaultValue={task.title}
+            onBlur={(e) => {
+              onUpdate?.({ title: e.target.value || task.title });
+              setEditingField(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+              if (e.key === "Escape") setEditingField(null);
+            }}
+          />
+        ) : (
           <div
             className={`text-body font-semibold text-ink ${
               task.done ? "text-ink-3 line-through" : ""
             }`}
+            onClick={() => onUpdate && setEditingField("title")}
+            role={onUpdate ? "button" : undefined}
+            tabIndex={onUpdate ? 0 : undefined}
           >
             {task.title}
           </div>
+        )}
 
-          <div className="mt-1.5 flex flex-wrap items-center gap-2 font-mono text-meta text-ink-3">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 font-mono text-meta text-ink-3">
+          <button
+            type="button"
+            className="priority-dot-btn"
+            onClick={() =>
+              onUpdate?.({
+                priority:
+                  task.priority === "low"
+                    ? "medium"
+                    : task.priority === "medium"
+                      ? "high"
+                      : "low",
+              })
+            }
+            aria-label={`Пріоритет: ${task.priority}. Тап — змінити`}
+          >
             <PriorityDot priority={task.priority} />
-            <span>{task.category}</span>
-            {task.due_date && <span>📅 {task.due_date}</span>}
-            {task.time && <span>🕑 {task.time}</span>}
-          </div>
+          </button>
 
-          {task.notes && <div className="mt-1 text-meta text-ink-2">{task.notes}</div>}
+          {editingField === "category" ? (
+            <select
+              className="task-field-category"
+              autoFocus
+              defaultValue={task.category}
+              onBlur={(e) => {
+                onUpdate?.({ category: e.target.value });
+                setEditingField(null);
+              }}
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span
+              className="task-chip"
+              onClick={() => onUpdate && setEditingField("category")}
+              role={onUpdate ? "button" : undefined}
+            >
+              {task.category}
+            </span>
+          )}
+
+          {editingField === "date" ? (
+            <input
+              type="date"
+              className="task-field-date"
+              autoFocus
+              defaultValue={task.due_date ?? ""}
+              onBlur={(e) => {
+                onUpdate?.({ due_date: e.target.value || null });
+                setEditingField(null);
+              }}
+            />
+          ) : (
+            <span
+              onClick={() => onUpdate && setEditingField("date")}
+              role={onUpdate ? "button" : undefined}
+            >
+              {task.due_date ? `📅 ${task.due_date}` : onUpdate ? "+ дата" : null}
+            </span>
+          )}
+
+          {editingField === "estimate" ? (
+            <input
+              type="number"
+              step={5}
+              min={0}
+              className="task-field-estimate"
+              autoFocus
+              defaultValue={task.estimate_minutes ?? ""}
+              onBlur={(e) => {
+                const val = e.target.value ? Number(e.target.value) : null;
+                onUpdate?.({ estimate_minutes: val });
+                setEditingField(null);
+              }}
+            />
+          ) : (
+            <span
+              onClick={() => onUpdate && setEditingField("estimate")}
+              role={onUpdate ? "button" : undefined}
+            >
+              {task.estimate_minutes ? `≈${task.estimate_minutes} хв` : onUpdate ? "+ час" : null}
+            </span>
+          )}
+
+          {task.time && <span>🕑 {task.time}</span>}
         </div>
-      )}
 
-      {!editing && onDelete && (
+        {task.notes && <div className="mt-1 text-meta text-ink-2">{task.notes}</div>}
+      </div>
+
+      {onDelete && (
         <button
           type="button"
           onClick={onDelete}
@@ -75,90 +165,6 @@ export default function TaskCard({ task, onToggle, onUpdate, onDelete }: TaskCar
           ✕
         </button>
       )}
-    </div>
-  );
-}
-
-function EditFields({
-  task,
-  onChange,
-  onDone,
-}: {
-  task: Task;
-  onChange: (patch: Partial<Task>) => void;
-  onDone: () => void;
-}) {
-  return (
-    <div className="min-w-0 flex-1">
-      <label className="field-label">Назва</label>
-      <input
-        className="field"
-        type="text"
-        value={task.title}
-        onChange={(e) => onChange({ title: e.target.value })}
-        placeholder="Що зробити"
-      />
-
-      <div className="field-grid">
-        <div>
-          <label className="field-label">Дата</label>
-          <input
-            className="field"
-            type="date"
-            value={task.due_date ?? ""}
-            onChange={(e) => onChange({ due_date: e.target.value ? e.target.value : null })}
-          />
-        </div>
-        <div>
-          <label className="field-label">Час</label>
-          <input
-            className="field"
-            type="time"
-            value={task.time ?? ""}
-            onChange={(e) => onChange({ time: e.target.value ? e.target.value : null })}
-          />
-        </div>
-        <div>
-          <label className="field-label">Пріоритет</label>
-          <select
-            className="field"
-            value={task.priority}
-            onChange={(e) => onChange({ priority: e.target.value as Priority })}
-          >
-            {PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="field-label">Категорія</label>
-          <select
-            className="field"
-            value={CATEGORIES.includes(task.category as never) ? task.category : "інше"}
-            onChange={(e) => onChange({ category: e.target.value })}
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <label className="field-label">Нотатки</label>
-      <textarea
-        className="field field-notes"
-        value={task.notes ?? ""}
-        onChange={(e) => onChange({ notes: e.target.value ? e.target.value : null })}
-        placeholder="Додаткові деталі (необовʼязково)"
-      />
-
-      <button type="button" className="btn-ghost mt-3 w-full" onClick={onDone}>
-        Готово
-      </button>
     </div>
   );
 }
