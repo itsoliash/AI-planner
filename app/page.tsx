@@ -242,7 +242,7 @@ export default function Home() {
           </button>
           <div className="mic-status">
             {!isProcessing && voiceState === "idle" && (voiceSupported
-              ? "Натисни, щоб наговорити задачі"
+              ? "Тисни й розказуй"
               : "Запис голосу недоступний у цьому браузері — введи текст нижче")}
             {!isProcessing && voiceState === "recording" && (
               <span className="rec-live">● Запис… {formatTimer(elapsed)}</span>

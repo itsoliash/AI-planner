@@ -131,9 +131,9 @@ h1 {
   margin-left: auto;
   margin-right: auto;
   text-align: center;
-  font-size: var(--t-display-size);
-  line-height: var(--t-display-line);
-  font-weight: var(--t-display-weight);
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 700;
   color: var(--ink);
   margin-bottom: var(--s-8);
 }
@@ -170,8 +170,8 @@ h1 {
    щоб композиція не змушувала сторінку скролитись раніше кнопки. */
 @media (max-height: 700px) {
   .brand .sub {
-    font-size: 1.125rem;
-    line-height: 1.625rem;
+    font-size: 1.375rem;
+    line-height: 1.875rem;
   }
 }
 
