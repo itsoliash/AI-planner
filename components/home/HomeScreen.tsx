@@ -46,6 +46,7 @@ export default function HomeScreen() {
       state={flow.state}
       elapsedMs={flow.elapsedMs}
       errorMessage={flow.errorMessage}
+      permissionDenied={flow.permissionDenied}
       showTagline={showTagline}
       voiceSupported={flow.voiceSupported}
       dockValue={flow.dockValue}
@@ -53,6 +54,7 @@ export default function HomeScreen() {
       onDockSubmit={flow.submitText}
       onMicClick={flow.state === "recording" ? flow.stopRecording : flow.startRecording}
       onRetry={flow.retry}
+      onCancelRecording={flow.cancelRecording}
     />
   );
 }

@@ -9,6 +9,8 @@ interface CaptureDockProps {
   onMicTap: () => void;
   placeholder: string;
   disabled?: boolean;
+  /** Акцент на поле — коли запис голосу недоступний (ТЗ 8.6). */
+  emphasized?: boolean;
 }
 
 export default function CaptureDock({
@@ -18,6 +20,7 @@ export default function CaptureDock({
   onMicTap,
   placeholder,
   disabled,
+  emphasized,
 }: CaptureDockProps) {
   const hasText = value.trim().length > 0;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -32,7 +35,7 @@ export default function CaptureDock({
   }
 
   return (
-    <div className="dock">
+    <div className={`dock ${emphasized ? "dock-emphasized" : ""}`}>
       <textarea
         className="dock-field"
         value={value}

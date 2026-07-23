@@ -21,6 +21,7 @@ export function useCaptureFlow(hasBacklog: boolean) {
   const [state, setState] = useState<FlowState>(hasBacklog ? "plan" : "capture");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const [dockValue, setDockValue] = useState("");
   const [newTaskIds, setNewTaskIds] = useState<Set<string>>(new Set());
   const [voiceSupported, setVoiceSupported] = useState(true);
@@ -48,6 +49,7 @@ export function useCaptureFlow(hasBacklog: boolean) {
 
   async function startRecording() {
     setErrorMessage("");
+    setPermissionDenied(false);
     try {
       const rec = new VoiceRecorder();
       rec.onError((err) => {
@@ -63,10 +65,11 @@ export function useCaptureFlow(hasBacklog: boolean) {
       setElapsedMs(0);
       timerRef.current = setInterval(() => setElapsedMs(Date.now() - startedAt), 250);
     } catch (e) {
-      const msg =
-        e instanceof DOMException && e.name === "NotAllowedError"
-          ? "Доступ до мікрофона відхилено. Дозволь мікрофон у налаштуваннях браузера."
-          : "Не вдалося почати запис: " + (e instanceof Error ? e.message : String(e));
+      const isDenied = e instanceof DOMException && e.name === "NotAllowedError";
+      const msg = isDenied
+        ? "Доступ до мікрофона відхилено. Дозволь мікрофон у налаштуваннях браузера."
+        : "Не вдалося почати запис: " + (e instanceof Error ? e.message : String(e));
+      setPermissionDenied(isDenied);
       setErrorMessage(msg);
       setState("error");
       stopTimer();
@@ -81,6 +84,7 @@ export function useCaptureFlow(hasBacklog: boolean) {
       return;
     }
     setState("processing");
+    setPermissionDenied(false);
     lastAttemptRef.current = { kind: "text", text: trimmed };
     try {
       const res = await fetch("/api/parse", {
@@ -166,6 +170,7 @@ export function useCaptureFlow(hasBacklog: boolean) {
   }
 
   function expandToCapture() {
+    setPermissionDenied(false);
     setState("capture");
   }
 
@@ -173,6 +178,7 @@ export function useCaptureFlow(hasBacklog: boolean) {
     state,
     elapsedMs,
     errorMessage,
+    permissionDenied,
     dockValue,
     setDockValue,
     voiceSupported,

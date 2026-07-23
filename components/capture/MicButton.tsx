@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import UnwindIndicator from "@/components/capture/UnwindIndicator";
 
 export type MicButtonSize = "dock" | "full";
@@ -10,7 +11,11 @@ interface MicButtonProps {
   disabled?: boolean;
   processingLabel?: string;
   compact?: boolean;
+  /** Свайп убік під час запису скасовує його без відправки (ТЗ 8.7). */
+  onCancel?: () => void;
 }
+
+const CANCEL_THRESHOLD_PX = 56;
 
 export default function MicButton({
   size,
@@ -19,31 +24,67 @@ export default function MicButton({
   disabled,
   processingLabel,
   compact,
+  onCancel,
 }: MicButtonProps) {
   const sizeClass = size === "dock" ? "mic-btn-dock" : "";
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startXRef = useRef<number | null>(null);
+
+  function handlePointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    if (state !== "recording") return;
+    startXRef.current = e.clientX;
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    if (startXRef.current === null) return;
+    setDragX(e.clientX - startXRef.current);
+  }
+
+  function endDrag() {
+    if (startXRef.current === null) return;
+    const finalDrag = dragX;
+    startXRef.current = null;
+    setDragging(false);
+    setDragX(0);
+    if (Math.abs(finalDrag) > CANCEL_THRESHOLD_PX) {
+      onCancel?.();
+    }
+  }
+
   return (
-    <button
-      type="button"
-      className={`mic-btn ${state} ${sizeClass} ${compact ? "compact" : ""}`}
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={state === "recording" ? "Зупинити запис" : "Почати запис"}
-    >
-      {state === "processing" ? (
-        <div className="mic-unwind">
-          <UnwindIndicator />
-          {processingLabel && (
-            <div className="mic-unwind-text">
-              <span className="mic-unwind-badge" style={{ whiteSpace: "pre-line" }}>
-                {processingLabel}
-              </span>
-            </div>
-          )}
-        </div>
-      ) : (
-        <MicIcon active={state === "recording"} />
-      )}
-    </button>
+    <div className="mic-btn-wrap">
+      <button
+        type="button"
+        className={`mic-btn ${state} ${sizeClass} ${compact ? "compact" : ""}`}
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={state === "recording" ? "Зупинити запис" : "Почати запис"}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        style={dragging ? { transform: `translateX(${dragX}px)`, transition: "none" } : undefined}
+      >
+        {state === "processing" ? (
+          <div className="mic-unwind">
+            <UnwindIndicator />
+            {processingLabel && (
+              <div className="mic-unwind-text">
+                <span className="mic-unwind-badge" style={{ whiteSpace: "pre-line" }}>
+                  {processingLabel}
+                </span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <MicIcon active={state === "recording"} />
+        )}
+      </button>
+      {dragging && <span className="mic-cancel-hint">Відпусти, щоб скасувати</span>}
+    </div>
   );
 }
 

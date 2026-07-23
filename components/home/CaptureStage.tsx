@@ -9,6 +9,7 @@ interface CaptureStageProps {
   state: FlowState;
   elapsedMs: number;
   errorMessage: string;
+  permissionDenied: boolean;
   showTagline: boolean;
   voiceSupported: boolean;
   dockValue: string;
@@ -16,6 +17,7 @@ interface CaptureStageProps {
   onDockSubmit: () => void;
   onMicClick: () => void;
   onRetry: () => void;
+  onCancelRecording: () => void;
 }
 
 function formatTimer(ms: number): string {
@@ -34,6 +36,7 @@ export default function CaptureStage({
   state,
   elapsedMs,
   errorMessage,
+  permissionDenied,
   showTagline,
   voiceSupported,
   dockValue,
@@ -41,6 +44,7 @@ export default function CaptureStage({
   onDockSubmit,
   onMicClick,
   onRetry,
+  onCancelRecording,
 }: CaptureStageProps) {
   const isProcessing = state === "processing";
   return (
@@ -50,12 +54,13 @@ export default function CaptureStage({
           tagline={showTagline ? "Плутанина думок в голові? Розкажи — змотаю в план" : undefined}
         />
 
-        <div className="mic-block">
+        <div className={`mic-block ${permissionDenied ? "mic-block-denied" : ""}`}>
           <MicButton
             size="full"
             state={isProcessing ? "processing" : state === "recording" ? "recording" : "idle"}
             onClick={onMicClick}
-            disabled={!voiceSupported || isProcessing}
+            onCancel={onCancelRecording}
+            disabled={!voiceSupported || isProcessing || permissionDenied}
             processingLabel={"Розбираю\nпочуте…."}
           />
           <div className="mic-status" aria-live="polite">
@@ -67,7 +72,15 @@ export default function CaptureStage({
               <span className="rec-live">● Запис… {formatTimer(elapsedMs)}</span>
             )}
           </div>
-          {state === "error" && (
+          {state === "error" && permissionDenied && (
+            <div className="error-banner">
+              <p>{errorMessage}</p>
+              <p className="error-banner-hint">
+                Можеш продовжити текстом у полі нижче.
+              </p>
+            </div>
+          )}
+          {state === "error" && !permissionDenied && (
             <div className="error-banner">
               <p>{errorMessage || "Не вдалось розібрати. Спробуй ще раз"}</p>
               <button type="button" className="btn-ghost" onClick={onRetry}>
@@ -88,6 +101,7 @@ export default function CaptureStage({
         }}
         placeholder="Або напиши, що в голові"
         disabled={isProcessing}
+        emphasized={permissionDenied}
       />
     </div>
   );

@@ -975,7 +975,7 @@ a:focus-visible {
    текстове поле й кнопку "надіслати" (окреме прохання Ольги 24.07.2026). */
 .plan-voice-fab {
   position: absolute;
-  left: var(--s-5);
+  right: var(--s-5);
   bottom: calc(100% + var(--s-3));
   margin: 0;
   width: 56px;
@@ -1045,3 +1045,36 @@ a:focus-visible {
   max-width: 320px;
 }
 .error-banner .btn-ghost { margin-top: var(--s-2); }
+.error-banner-hint { margin-top: var(--s-1); color: var(--ink-2); }
+
+/* --- Відхилено доступ до мікрофона (ТЗ 8.6) --- */
+.mic-block-denied .mic-btn { opacity: 0.5; }
+
+/* --- Акцент на доці, коли мікрофон недоступний (ТЗ 8.6) --- */
+.dock-emphasized {
+  border-color: var(--signal);
+  box-shadow: 0 0 0 1px var(--signal);
+}
+
+/* --- Свайп-скасування запису (ТЗ 8.7) --- */
+.mic-btn-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mic-btn.recording {
+  touch-action: none;
+}
+
+.mic-cancel-hint {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: var(--s-2);
+  white-space: nowrap;
+  color: var(--ink-3);
+  font-size: var(--t-meta-size);
+}
