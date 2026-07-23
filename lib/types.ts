@@ -26,8 +26,8 @@ export interface ParsedTask {
   time: string | null; // HH:MM
   priority: Priority;
   category: string;
-  estimate_minutes: number | null;
   notes: string | null;
+  estimate_minutes: number | null;
 }
 
 /** Задача у клієнтському сторі (чернетка або збережена). */

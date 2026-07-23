@@ -32,8 +32,8 @@ interface TaskItem {
   time: string | null;
   priority: "low" | "medium" | "high";
   category: string;
-  estimate_minutes: number | null;
   notes: string | null;
+  estimate_minutes: number | null;
 }
 
 export async function POST(req: NextRequest) {
