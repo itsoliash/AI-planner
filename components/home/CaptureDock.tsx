@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef } from "react";
 
 interface CaptureDockProps {
   value: string;
@@ -20,13 +20,24 @@ export default function CaptureDock({
   disabled,
 }: CaptureDockProps) {
   const hasText = value.trim().length > 0;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    onChange(e.target.value);
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = `${Math.min(el.scrollHeight, 72)}px`;
+    }
+  }
 
   return (
     <div className="dock">
       <textarea
         className="dock-field"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={handleChange}
+        ref={textareaRef}
         placeholder={placeholder}
         disabled={disabled}
         rows={1}
