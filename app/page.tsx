@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { VoiceRecorder, isRecordingSupported } from "@/lib/audio/recorder";
-import { Task } from "@/lib/types";
 import { useTasksStore, useHydrated } from "@/lib/store/tasks";
 import Brand from "@/components/Brand";
 import MicButton from "@/components/capture/MicButton";
-import TaskCard from "@/components/ui/TaskCard";
+import PlanStage from "@/components/home/PlanStage";
 
 type VoiceState = "idle" | "recording" | "transcribing";
-type TabKey = "today" | "all";
 
 const EXAMPLE =
   "Завтра о 10 ранку зідзвон з дизайн-командою. Треба до п'ятниці здати макети лендінга, це терміново. Купити молоко і хліб. Записатись до стоматолога наступного тижня.";
@@ -19,10 +17,6 @@ function formatTimer(ms: number): string {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 export default function Home() {
@@ -38,8 +32,6 @@ export default function Home() {
   const toggleDone = useTasksStore((s) => s.toggleDone);
   const updateTask = useTasksStore((s) => s.updateTask);
   const deleteTask = useTasksStore((s) => s.deleteTask);
-
-  const [tab, setTab] = useState<TabKey>("today");
 
   // Голос
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
@@ -155,47 +147,6 @@ export default function Home() {
   // текст (наприклад, з голосу) — щоб не ховати те, що вже надиктовано.
   const isTextExpanded = textFocused || text.trim().length > 0;
 
-  const today = todayISO();
-  const visibleTasks = useMemo(() => {
-    if (tab === "all") return tasks;
-    // «Сьогодні»: сьогоднішні + прострочені, ще не виконані.
-    return tasks.filter(
-      (t) => !t.done && t.due_date !== null && t.due_date <= today
-    );
-  }, [tasks, tab, today]);
-
-  // Групування табу «Всі задачі»: Прострочені → Сьогодні → Незабаром →
-  // Без дати → Виконано (ТЗ 4.2, адаптовано під повний список задач).
-  const taskGroups = useMemo(() => {
-    const overdue: Task[] = [];
-    const dueToday: Task[] = [];
-    const upcoming: Task[] = [];
-    const noDate: Task[] = [];
-    const done: Task[] = [];
-
-    for (const t of tasks) {
-      if (t.done) {
-        done.push(t);
-      } else if (t.due_date === null) {
-        noDate.push(t);
-      } else if (t.due_date < today) {
-        overdue.push(t);
-      } else if (t.due_date === today) {
-        dueToday.push(t);
-      } else {
-        upcoming.push(t);
-      }
-    }
-
-    return [
-      { key: "overdue", title: "Прострочені", items: overdue, danger: true },
-      { key: "today", title: "Сьогодні", items: dueToday },
-      { key: "upcoming", title: "Незабаром", items: upcoming },
-      { key: "nodate", title: "Без дати", items: noDate },
-      { key: "done", title: "Виконано", items: done },
-    ].filter((g) => g.items.length > 0);
-  }, [tasks, today]);
-
   return (
     <main className="wrap">
       {/* Екран Capture: лого/мікрофон зверху, текстовий ввід унизу, між ними
@@ -281,64 +232,23 @@ export default function Home() {
       </div>
       </div>
 
-      {/* Списки — показуємо тільки коли є хоч одна збережена задача */}
+      {/* Стан `plan` — показуємо тільки коли є хоч одна збережена задача.
+          Тимчасове проводове з'єднання: повноцінна машина станів (стан
+          `capture` ⇄ `plan`, HomeScreen) — окрема задача плану, ще не
+          виконана в цій сесії. Поки що док під PlanStage дублює виклик
+          handleParse/startRecording напряму. */}
       {hydrated && tasks.length > 0 && (
-        <section className="lists">
-          <div className="tabs">
-            <button
-              type="button"
-              className={`tab ${tab === "today" ? "active" : ""}`}
-              onClick={() => setTab("today")}
-            >
-              Сьогодні
-            </button>
-            <button
-              type="button"
-              className={`tab ${tab === "all" ? "active" : ""}`}
-              onClick={() => setTab("all")}
-            >
-              Всі задачі ({tasks.length})
-            </button>
-          </div>
-
-          {tab === "today" ? (
-            visibleTasks.length === 0 ? (
-              <div className="hint">На сьогодні порожньо. Наговори або встав задачі вгорі.</div>
-            ) : (
-              <div className="cards">
-                {visibleTasks.map((t) => (
-                  <TaskCard
-                    key={t.id}
-                    task={t}
-                    onToggle={() => toggleDone(t.id)}
-                    onUpdate={(patch) => updateTask(t.id, patch)}
-                    onDelete={() => deleteTask(t.id)}
-                  />
-                ))}
-              </div>
-            )
-          ) : (
-            <div className="task-groups">
-              {taskGroups.map((g) => (
-                <div key={g.key} className="task-group">
-                  <h2 className={`group-title ${g.danger ? "danger" : ""}`}>
-                    {g.title} ({g.items.length})
-                  </h2>
-                  <div className="cards">
-                    {g.items.map((t) => (
-                      <TaskCard
-                        key={t.id}
-                        task={t}
-                        onToggle={() => toggleDone(t.id)}
-                        onDelete={() => deleteTask(t.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <PlanStage
+          tasks={tasks}
+          onToggle={toggleDone}
+          onUpdate={updateTask}
+          onDelete={deleteTask}
+          onMicTap={startRecording}
+          dockValue={text}
+          onDockChange={setText}
+          onDockSubmit={handleParse}
+          dockDisabled={isBusy || loading}
+        />
       )}
     </main>
   );

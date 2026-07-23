@@ -42,3 +42,20 @@ export function selectToday(
 
   return { overdue, today };
 }
+
+/**
+ * Рекомендації для порожнього «Сьогодні» (ТЗ 8.1/8.2): high → найближчий
+ * дедлайн → найстаріші за створенням, максимум 3.
+ */
+export function selectRecommendations(tasks: Task[]): Task[] {
+  const active = tasks.filter((t) => !t.done);
+  const sorted = [...active].sort((a, b) => {
+    if (a.priority === "high" && b.priority !== "high") return -1;
+    if (b.priority === "high" && a.priority !== "high") return 1;
+    if (a.due_date && b.due_date) return a.due_date < b.due_date ? -1 : 1;
+    if (a.due_date) return -1;
+    if (b.due_date) return 1;
+    return a.createdAt - b.createdAt;
+  });
+  return sorted.slice(0, 3);
+}

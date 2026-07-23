@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { selectToday } from "./selectToday";
+import { selectToday, selectRecommendations } from "./selectToday";
 import type { Task } from "@/lib/types";
 
 function makeTask(overrides: Partial<Task>): Task {
@@ -66,5 +66,18 @@ describe("selectToday", () => {
     const result = selectToday([...overdueTasks, todayTask], "2026-07-23");
     expect(result.overdue.length).toBe(8);
     expect(result.today.length).toBe(0);
+  });
+});
+
+describe("selectRecommendations", () => {
+  it("сортує high -> найближчий дедлайн -> найстаріші, максимум 3", () => {
+    const tasks = [
+      makeTask({ id: "old", createdAt: 1 }),
+      makeTask({ id: "high", priority: "high", createdAt: 5 }),
+      makeTask({ id: "soon", due_date: "2026-08-01", createdAt: 3 }),
+      makeTask({ id: "later", due_date: "2026-09-01", createdAt: 4 }),
+    ];
+    const result = selectRecommendations(tasks);
+    expect(result.map((t) => t.id)).toEqual(["high", "soon", "later"]);
   });
 });

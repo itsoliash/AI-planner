@@ -925,3 +925,94 @@ a:focus-visible {
   outline: 2px solid var(--signal);
   outline-offset: 2px;
 }
+
+/* --- PlanStage (ТЗ «редизайн №2», розділ 4.2) --- */
+.plan-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.plan-header {
+  padding-top: calc(env(safe-area-inset-top) + var(--s-3));
+}
+
+.plan-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: var(--s-4) 0 var(--s-4);
+}
+
+.plan-title-row h1 {
+  margin-bottom: 0;
+}
+
+.plan-date {
+  color: var(--ink-3);
+  font-size: var(--t-meta-size);
+}
+
+.plan-empty-line {
+  color: var(--ink-2);
+  text-align: center;
+  margin: var(--s-8) 0 var(--s-4);
+}
+
+.recommendations-heading {
+  color: var(--ink-2);
+  text-align: center;
+  margin-bottom: var(--s-3);
+}
+
+.plan-dock-spacer {
+  flex: 1;
+  min-height: var(--s-14);
+}
+
+.plan-dock-sticky {
+  position: sticky;
+  bottom: 0;
+  padding: var(--s-4) var(--s-5) calc(var(--s-4) + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+
+/* --- Вкладки «Сьогодні / Всі задачі» --- */
+.pill-tabs {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.pill-tab {
+  margin: 0;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.pill-tab:hover:not(:disabled) { background: var(--surface-sunken); }
+.pill-tab.active { background: var(--accent); color: var(--on-accent); }
+
+/* --- Групи «Прострочені / На сьогодні» --- */
+.task-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+}
+
+.task-group .cards { margin-top: var(--s-3); }
+
+.group-title-sticky {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  padding: var(--s-2) 0;
+  font-size: var(--t-h2-size);
+  font-weight: var(--t-h2-weight);
+  color: var(--ink);
+  z-index: 1;
+}
+.group-title-sticky.danger { color: var(--danger); }
